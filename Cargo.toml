@@ -1,0 +1,19 @@
+[package]
+name = "ileap-cli"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "ileap"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1"
+base64 = "0.22"
+clap = { version = "4", features = ["derive", "env"] }
+dirs = "5"
+reqwest = { version = "0.12", features = ["json"] }
+rpassword = "7"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
