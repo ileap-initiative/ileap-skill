@@ -23,16 +23,20 @@ pub struct Cli {
     #[arg(long, short = 'o', default_value = "pretty", value_enum)]
     pub output: OutputFormat,
 
+    /// Request timeout in seconds
+    #[arg(long, env = "ILEAP_TIMEOUT")]
+    pub timeout: Option<u64>,
+
     #[command(subcommand)]
     pub command: Option<Command>,
 }
 
 #[derive(ValueEnum, Clone, Debug)]
 pub enum OutputFormat {
-    /// Compact JSON
-    Json,
-    /// Indented JSON
+    /// Indented, human-readable JSON (default)
     Pretty,
+    /// Compact single-line JSON, suited for machine consumption
+    Compact,
 }
 
 #[derive(Subcommand)]
@@ -43,15 +47,49 @@ pub enum Command {
         cmd: FootprintsCmd,
     },
     /// iLEAP standalone ShipmentFootprints (DT1) [/v1/ileap/shipments]
-    Shipments(ListArgs),
+    Shipments {
+        #[command(subcommand)]
+        cmd: ListCmd,
+    },
     /// iLEAP standalone TOCs (DT2) [/v1/ileap/tocs]
-    Tocs(ListArgs),
+    Tocs {
+        #[command(subcommand)]
+        cmd: ListCmd,
+    },
     /// iLEAP standalone HOCs (DT2) [/v1/ileap/hocs]
-    Hocs(ListArgs),
+    Hocs {
+        #[command(subcommand)]
+        cmd: ListCmd,
+    },
     /// iLEAP Transport Activity Data (DT3) [/v1/ileap/tad]
-    Tad(ListArgs),
+    Tad {
+        #[command(subcommand)]
+        cmd: ListCmd,
+    },
     /// iLEAP Aggregated Emissions Data (DT4) [/v1/ileap/aed]
-    Aed(ListArgs),
+    Aed {
+        #[command(subcommand)]
+        cmd: ListCmd,
+    },
+    /// Manage authentication
+    Auth {
+        #[command(subcommand)]
+        cmd: AuthCmd,
+    },
+}
+
+#[derive(Subcommand)]
+pub enum AuthCmd {
+    /// Authenticate and cache a token. Idempotent — skips re-auth if a valid token is already cached
+    Login,
+    /// Show whether a valid cached token exists
+    Status,
+}
+
+#[derive(Subcommand)]
+pub enum ListCmd {
+    /// List records
+    List(ListArgs),
 }
 
 #[derive(Subcommand)]
@@ -62,6 +100,9 @@ pub enum FootprintsCmd {
     Get {
         /// Footprint UUID
         id: String,
+        /// Print the request that would be sent without executing it
+        #[arg(long, short = 'n')]
+        dry_run: bool,
     },
 }
 
@@ -71,12 +112,26 @@ pub struct ListArgs {
     #[arg(long, short = 'l')]
     pub limit: Option<u32>,
 
-    /// Filter expression. PACT-based endpoints use OData syntax (e.g. "created lt '2024-01-01T00:00:00Z'").
-    /// iLEAP standalone endpoints use key=value pairs (e.g. "mode=road"), repeatable. Filtering can be used to get a
-    /// single resource by specifying its unique attributes. Dot notation can be used for nested attributes
-    /// (e.g. "shipment.id=123"). Interval filtering is supported for iLEAP standalone endpoints using the syntax
-    /// "key=gt:value" and "key=lt:value" (e.g. "created=gt:2024-01-01T00:00:00Z"). See the iLEAP Technical
-    /// Specifications for more details.
+    /// Filter expression (repeatable).
+    ///
+    /// PACT-based endpoints use OData syntax: -f "created lt '2024-01-01T00:00:00Z'"
+    ///
+    /// iLEAP standalone endpoints use key=value pairs: -f mode=road
+    /// To retrieve a single resource by ID: -f id=abc-123
+    /// Dot notation for nested attributes: -f shipment.id=abc-123
+    /// Interval filtering: -f created=gt:2024-01-01T00:00:00Z
     #[arg(long, short = 'f')]
     pub filter: Vec<String>,
+
+    /// Print the request that would be sent without executing it
+    #[arg(long, short = 'n')]
+    pub dry_run: bool,
+
+    /// Automatically page through all results without prompting
+    #[arg(long, short = 'y')]
+    pub yes: bool,
+
+    /// Maximum number of pages to fetch when paginating
+    #[arg(long, short = 'm')]
+    pub max_pages: Option<u32>,
 }
