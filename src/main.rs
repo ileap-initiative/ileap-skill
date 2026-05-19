@@ -62,15 +62,25 @@ async fn run(cli: Cli) -> Result<()> {
                     "no command provided and stdin is not a terminal — use a subcommand (run with --help to see available commands)"
                 );
             }
-            let client = if let Some(t) = auth::load_saved_token(&cli.base_url) {
-                client::Client::from_token(&cli.base_url, t, timeout)
-            } else {
-                let username = tty::prompt("Username: ")?;
-                let password = tty::prompt_password("Password: ")?;
-                let c = client::Client::authenticate(&cli.base_url, &username, &password, timeout)
-                    .await?;
-                auth::save_token(&cli.base_url, c.token())?;
-                c
+            let client = match auth::load_saved_token(&cli.base_url) {
+                Ok(Some(t)) => client::Client::from_token(&cli.base_url, t, timeout),
+                Ok(None) => {
+                    let username = tty::prompt("Username: ")?;
+                    let password = tty::prompt_password("Password: ")?;
+                    let c = client::Client::authenticate(&cli.base_url, &username, &password, timeout)
+                        .await?;
+                    auth::save_token(&cli.base_url, c.token())?;
+                    c
+                }
+                Err(e) => {
+                    eprintln!("warning: {e}; continuing with interactive login");
+                    let username = tty::prompt("Username: ")?;
+                    let password = tty::prompt_password("Password: ")?;
+                    let c = client::Client::authenticate(&cli.base_url, &username, &password, timeout)
+                        .await?;
+                    auth::save_token(&cli.base_url, c.token())?;
+                    c
+                }
             };
             repl::run_repl(client, &output).await?;
         }
@@ -89,7 +99,9 @@ async fn run(cli: Cli) -> Result<()> {
         }
 
         Some(cmd) => {
-            let client = if let Some(t) = cli.token.or_else(|| auth::load_saved_token(&cli.base_url)) {
+            let client = if let Some(t) = cli.token {
+                client::Client::from_token(&cli.base_url, t, timeout)
+            } else if let Some(t) = auth::load_saved_token(&cli.base_url)? {
                 client::Client::from_token(&cli.base_url, t, timeout)
             } else {
                 match (cli.username, cli.password) {

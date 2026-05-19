@@ -19,10 +19,10 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                     );
                     return Ok(());
                 }
-                run_list(
-                    args.yes, args.max_pages, args.limit, output,
-                    |off| client.footprints(args.limit, off, &args.filter),
-                ).await?;
+                run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                    client.footprints(args.limit, off, &args.filter)
+                })
+                .await?;
             }
             FootprintsCmd::Get { id, dry_run } => {
                 if dry_run {
@@ -33,7 +33,9 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
             }
         },
 
-        Command::Shipments { cmd: ListCmd::List(args) } => {
+        Command::Shipments {
+            cmd: ListCmd::List(args),
+        } => {
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/shipments", args.limit, 0, &args.filter),
@@ -41,13 +43,15 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(
-                args.yes, args.max_pages, args.limit, output,
-                |off| client.shipments(args.limit, off, &args.filter),
-            ).await?;
+            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                client.shipments(args.limit, off, &args.filter)
+            })
+            .await?;
         }
 
-        Command::Tocs { cmd: ListCmd::List(args) } => {
+        Command::Tocs {
+            cmd: ListCmd::List(args),
+        } => {
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tocs", args.limit, 0, &args.filter),
@@ -55,13 +59,15 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(
-                args.yes, args.max_pages, args.limit, output,
-                |off| client.tocs(args.limit, off, &args.filter),
-            ).await?;
+            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                client.tocs(args.limit, off, &args.filter)
+            })
+            .await?;
         }
 
-        Command::Hocs { cmd: ListCmd::List(args) } => {
+        Command::Hocs {
+            cmd: ListCmd::List(args),
+        } => {
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/hocs", args.limit, 0, &args.filter),
@@ -69,13 +75,15 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(
-                args.yes, args.max_pages, args.limit, output,
-                |off| client.hocs(args.limit, off, &args.filter),
-            ).await?;
+            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                client.hocs(args.limit, off, &args.filter)
+            })
+            .await?;
         }
 
-        Command::Tad { cmd: ListCmd::List(args) } => {
+        Command::Tad {
+            cmd: ListCmd::List(args),
+        } => {
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tad", args.limit, 0, &args.filter),
@@ -83,13 +91,15 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(
-                args.yes, args.max_pages, args.limit, output,
-                |off| client.tad(args.limit, off, &args.filter),
-            ).await?;
+            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                client.tad(args.limit, off, &args.filter)
+            })
+            .await?;
         }
 
-        Command::Aed { cmd: ListCmd::List(args) } => {
+        Command::Aed {
+            cmd: ListCmd::List(args),
+        } => {
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/aed", args.limit, 0, &args.filter),
@@ -97,10 +107,10 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(
-                args.yes, args.max_pages, args.limit, output,
-                |off| client.aed(args.limit, off, &args.filter),
-            ).await?;
+            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                client.aed(args.limit, off, &args.filter)
+            })
+            .await?;
         }
 
         Command::Auth { .. } => {
@@ -122,7 +132,9 @@ where
     F: Fn(u32) -> Fut,
     Fut: Future<Output = Result<Value>>,
 {
-    if yes || !std::io::stdin().is_terminal() {
+    let non_interactive = yes || !std::io::stdin().is_terminal();
+
+    if non_interactive {
         let mut pages: Vec<Value> = vec![];
         let mut offset = 0u32;
         let mut page_num = 0u32;
@@ -134,7 +146,10 @@ where
             if !at_boundary || max_pages.is_some_and(|mp| page_num >= mp) {
                 break;
             }
-            offset += limit.unwrap();
+            let Some(l) = limit else {
+                break;
+            };
+            offset += l;
         }
         output::print_value(&merge_pages(pages), output);
     } else {
@@ -147,7 +162,10 @@ where
             if !print_page(&value, limit, output)? || at_max {
                 break;
             }
-            offset += limit.unwrap();
+            let Some(l) = limit else {
+                break;
+            };
+            offset += l;
         }
     }
     Ok(())

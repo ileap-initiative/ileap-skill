@@ -32,7 +32,7 @@ impl std::fmt::Display for ExitCode {
 impl std::error::Error for ExitCode {}
 
 impl Client {
-    fn build_http(timeout: Option<Duration>) -> reqwest::Client {
+    fn build_client(timeout: Option<Duration>) -> reqwest::Client {
         let mut builder = reqwest::Client::builder();
         if let Some(t) = timeout {
             builder = builder.timeout(t);
@@ -40,14 +40,24 @@ impl Client {
         builder.build().unwrap_or_default()
     }
 
-    async fn discover_token_endpoint(http: &reqwest::Client, base_url: &str) -> String {
+    async fn discover_token_endpoint(client: &reqwest::Client, base_url: &str) -> String {
         let discovery_url = format!("{base_url}/.well-known/openid-configuration");
-        if let Ok(resp) = http.get(&discovery_url).send().await
-            && resp.status().is_success()
-                && let Ok(doc) = resp.json::<serde_json::Value>().await
-                    && let Some(endpoint) = doc.get("token_endpoint").and_then(|v| v.as_str()) {
-                        return endpoint.to_string();
-                    }
+        let Ok(resp) = client.get(&discovery_url).send().await else {
+            return format!("{base_url}/auth/token");
+        };
+
+        if !resp.status().is_success() {
+            return format!("{base_url}/auth/token");
+        }
+
+        let Ok(doc) = resp.json::<serde_json::Value>().await else {
+            return format!("{base_url}/auth/token");
+        };
+
+        if let Some(endpoint) = doc.get("token_endpoint").and_then(|v| v.as_str()) {
+            return endpoint.to_string();
+        }
+
         format!("{base_url}/auth/token")
     }
 
@@ -57,11 +67,11 @@ impl Client {
         password: &str,
         timeout: Option<Duration>,
     ) -> Result<Self> {
-        let http = Self::build_http(timeout);
+        let client = Self::build_client(timeout);
         let credentials = STANDARD.encode(format!("{username}:{password}"));
-        let token_endpoint = Self::discover_token_endpoint(&http, base_url).await;
+        let token_endpoint = Self::discover_token_endpoint(&client, base_url).await;
 
-        let resp = http
+        let resp = client
             .post(&token_endpoint)
             .header("Authorization", format!("Basic {credentials}"))
             .form(&[("grant_type", "client_credentials")])
@@ -93,7 +103,7 @@ impl Client {
             .with_context(|| format!("failed to parse auth response — unexpected format: {body}"))?;
 
         Ok(Self {
-            http,
+            http: client,
             base_url: base_url.to_string(),
             token: token_resp.access_token,
         })
@@ -101,7 +111,7 @@ impl Client {
 
     pub fn from_token(base_url: &str, token: String, timeout: Option<Duration>) -> Self {
         Self {
-            http: Self::build_http(timeout),
+            http: Self::build_client(timeout),
             base_url: base_url.to_string(),
             token,
         }
@@ -190,7 +200,7 @@ impl Client {
         p
     }
 
-    async fn get_with_params(
+    async fn get_kv_filters(
         &self,
         path: &str,
         limit: Option<u32>,
@@ -272,7 +282,7 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> Result<Value> {
-        self.get_with_params("/v1/ileap/shipments", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/shipments", limit, offset, filters).await
     }
 
     pub async fn tocs(
@@ -281,7 +291,7 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> Result<Value> {
-        self.get_with_params("/v1/ileap/tocs", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/tocs", limit, offset, filters).await
     }
 
     pub async fn hocs(
@@ -290,7 +300,7 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> Result<Value> {
-        self.get_with_params("/v1/ileap/hocs", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/hocs", limit, offset, filters).await
     }
 
     pub async fn tad(
@@ -299,7 +309,7 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> Result<Value> {
-        self.get_with_params("/v1/ileap/tad", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/tad", limit, offset, filters).await
     }
 
     pub async fn aed(
@@ -308,7 +318,7 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> Result<Value> {
-        self.get_with_params("/v1/ileap/aed", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/aed", limit, offset, filters).await
     }
 }
 
