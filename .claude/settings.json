@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ileap *)",
+      "Bash(cargo run -- *)",
+      "Bash(open /tmp/ileap-dashboard.html)"
+    ]
+  }
+}

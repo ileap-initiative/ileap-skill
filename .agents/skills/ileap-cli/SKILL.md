@@ -10,6 +10,53 @@ description: >-
 
 # iLEAP CLI Skill
 
+## Prerequisites
+
+Verify the CLI is installed before proceeding:
+
+```bash
+which ileap || echo "not installed"
+```
+
+If missing, install it:
+
+```bash
+cargo install ileap-cli
+```
+
+Requires Rust. If `cargo` is not available, install it first:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+**If `ileap` is not in PATH but you are inside the project repo**, use `cargo run --` instead of installing — it compiles and runs the local build:
+
+```bash
+cargo run -- -o compact auth status
+# equivalent to: ileap -o compact auth status
+```
+
+Throughout this skill, replace `ileap` with `cargo run --` whenever the global binary is absent.
+
+## Permissions
+
+To avoid Claude asking for permission on every CLI invocation, add the commands to the project allowlist once in `.claude/settings.json`:
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "Bash(ileap *)",
+      "Bash(cargo run -- *)",
+      "Bash(open /tmp/ileap-dashboard.html)"
+    ]
+  }
+}
+```
+
+You can apply this by running `/update-config`.
+
 ## Overview
 
 `ileap` is a CLI tool for the iLEAP API. It supports listing all iLEAP resource types,
@@ -165,31 +212,78 @@ Examples:
 ileap -o compact auth status
 ```
 
-If `authenticated` is `false`, run `ileap auth login` first (see Authentication section).
+If `authenticated` is `false`, do not prompt the user interactively. Instead, try the demo server credentials first:
 
-### 2. Fetch the relevant resources
+```bash
+ileap --base-url https://ileap-preview.fly.dev --username hello --password pathfinder auth login
+```
 
-Only run commands for the resources the user requested. Add `--base-url` if not using the default:
+Only ask the user for credentials if the demo server login also fails.
+
+### 2. Fetch the relevant resources in parallel
+
+Run all required resource commands in a single message as parallel tool calls — do not fetch sequentially. Add `--base-url` if not using the default:
 
 ```bash
 ileap --base-url <url> -o compact shipments list --yes --limit 50 --max-pages 1
 ileap --base-url <url> -o compact tocs       list --yes --limit 50 --max-pages 1
-# etc.
+# etc. — all issued at the same time
 ```
 
-For endpoints that return a non-zero exit code, capture stderr and check `cli_error.type`:
+**Capture stderr separately** to detect errors without swallowing output:
+
+```bash
+ileap -o compact shipments list --yes 2>/tmp/ileap-shipments-err.json
+# then check exit code; if non-zero, read /tmp/ileap-shipments-err.json
+```
+
+On non-zero exit, read `cli_error.type` from stderr:
 - `auth_error` → re-authenticate before retrying
 - `not_found` → endpoint not supported on this server; mark as unavailable in the dashboard
 - `error` → show the message in the dashboard card
 
+**Useful jq snippets** once you have the JSON response:
+
+```bash
+# Count records
+echo "$SHIPMENTS" | jq '.data | length'
+
+# Extract the data array for iteration
+echo "$SHIPMENTS" | jq '.data[]'
+
+# Pluck a single field from all records
+echo "$TOCS" | jq '[.data[].tocId]'
+```
+
 ### 3. Generate and open the dashboard
 
-Write an `ileap-dashboard.html` file and open it in the default browser.
+Write the dashboard to `/tmp/ileap-dashboard.html` and open it in the default browser:
+
+```bash
+open /tmp/ileap-dashboard.html
+```
 
 **Content to include:**
-- Header: base URL and generation timestamp
+- Header: iLEAP logo (use an absolute `file://` path to `ileap-logo.png` in the repo root if it exists, so the image resolves from `/tmp`), base URL, and generation timestamp
 - Auth status badge
-- One summary card per resource type (e.g. one card for Shipments, one for TOCs) showing the total record count returned, or an error message if the fetch failed
-- Collapsible block per resource with the first 5 records as pretty-printed JSON
+- One summary card per resource type showing the total record count returned, or an error message if the fetch failed
+- One expanded row/card per record showing **all mandatory fields** (see table below), plus any other fields present in the data
+- Collapsible raw JSON block per record
+- **Cross-references:** wherever a record contains a `tocId` or `hocId` (e.g. inside a shipment's TCEs), resolve it against the fetched TOC/HOC data and display the linked record's key fields inline (mode, emission intensity). This makes the relationship between shipments and their transport operations visible without requiring the user to look up IDs manually.
+
+**Mandatory fields — always show these in the structured view:**
+
+| Resource | Mandatory fields |
+|---|---|
+| ShipmentFootprint | `shipmentId`, `mass`, `tces` |
+| TCE (inside each shipment) | `tceId`, `shipmentId`, `mass`, `co2eTTW`, `co2eWTW`, `distance`, `transportActivity` |
+| TOC | `tocId`, `mode`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit` |
+| HOC | `hocId`, `hubType`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit` |
+| TAD | `activityId`, `mode`, `distance`, `mass`, `transportActivity` |
+| AED | `reportId`, `status`, `referencePeriodStart`, `referencePeriodEnd` |
+
+These required fields come from the OpenAPI spec (`required` arrays on each schema). If a mandatory field is absent from a record, show it explicitly as `—` (not missing silently).
 
 Keep styling clean and modern with inline CSS (no external dependencies).
+
+**Styling constraint:** Always use a light background (white or light grey). Do not use dark mode — the iLEAP logo brand guidelines require a light background context.
