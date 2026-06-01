@@ -2,13 +2,30 @@
 name: ileap-cli
 description: >-
   Use the iLEAP CLI to query iLEAP API resources and render an HTML dashboard.
-  USE FOR: fetching shipments, footprints, tocs, hocs, tad, aed data from the iLEAP API;
-  filtering and paginating results; checking auth status; generating a dashboard overview;
-  exploring transport emissions data. TRIGGER PHRASES: "show ileap dashboard",
-  "fetch ileap data", "list shipments", "list footprints", "query iLEAP", "ileap summary".
+  REQUIRED for all iLEAP work — use this skill before reading source code, fetching data,
+  or generating any iLEAP output. Prevents common mistakes: wrong terminology (TOC = Transport
+  Operation Category, HOC = Hub Operation Category — not "Characteristics"), incorrect field
+  names, and redundant reimplementation. USE FOR: fetching shipments, footprints, tocs, hocs,
+  tad, aed; filtering and paginating; checking auth; building, creating, or showing a dashboard;
+  exploring transport emissions data. TRIGGER PHRASES: "show ileap", "fetch ileap",
+  "list shipments", "list footprints", "query iLEAP", "ileap summary", "build a dashboard",
+  "create a dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
 ---
 
 # iLEAP CLI Skill
+
+## Step 0 — Read schemas before doing anything else
+
+**Read `.agents/skills/ileap-cli/SCHEMAS.md` now, before reading further or taking any action.**
+
+It contains the authoritative terminology definitions and field schemas for all iLEAP resources. Without it you will make mistakes — for example, TOC stands for Transport Operation **Category** (not Characteristics), and field names differ from what general knowledge would suggest.
+
+## DO NOT
+
+- **DO NOT** read the CLI source code to understand the API or data shapes — use SCHEMAS.md instead.
+- **DO NOT** implement your own data-fetching logic — use the CLI commands documented here.
+- **DO NOT** assume what any iLEAP term means — check the Terminology table in SCHEMAS.md first.
+- **DO NOT** write a new CLI command when the user asks for a dashboard — run the Dashboard Procedure below.
 
 ## Prerequisites
 

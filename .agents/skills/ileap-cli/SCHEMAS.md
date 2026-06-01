@@ -2,6 +2,23 @@
 
 **Source of truth:** The OpenAPI spec at `https://ileap-preview.fly.dev/openapi.json` documents all resources, fields, enums, and nesting.
 
+## Terminology
+
+These definitions come from the iLEAP Technical Specifications and the GLEC Framework. Do not guess expansions — use this table.
+
+| Term | Full name | Notes |
+|---|---|---|
+| TOC | Transport Operation Category | Do not expand as "Characteristics" |
+| HOC | Hub Operation Category | Do not expand as "Characteristics" |
+| TCE | Transport Chain Element | A single leg of a shipment |
+| TC | Transport Chain | A full shipment (1 or more TCEs) |
+| WTW | Well-to-Wheel | Energy production + vehicle operation emissions (GLEC Framework) |
+| TTW | Tank-to-Wheel | Vehicle operation emissions only (GLEC Framework) |
+| DT1 | Data Transaction 1 | TCE Data Exchange |
+| DT2 | Data Transaction 2 | TOC or HOC Data Exchange |
+| DT3 | Data Transaction 3 | Transport Activity Data Exchange |
+| DT4 | Data Transaction 4 | Aggregated Emissions Data Exchange |
+
 This page shows common patterns and how to explore the schema dynamically. For any field not listed below, use the jq recipes in the **Discovery Workflow** section to extract it from the OpenAPI spec.
 
 ## Filtering Overview
