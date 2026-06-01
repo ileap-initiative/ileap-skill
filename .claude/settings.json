@@ -1,12 +1,11 @@
 {
   "permissions": {
     "allow": [
+      "Bash(bash -c *)",
       "Bash(ileap *)",
-      "Bash(cargo run -- *)",
-      "Bash(open /tmp/ileap-dashboard.html)",
-      "Write(/tmp/ileap-dashboard.html)",
-      "Bash(find *)",
-      "Bash(ls *)"
+      "Bash(python3 *)",
+      "Bash(open /tmp/*)",
+      "Write(/tmp/*)"
     ]
   }
 }
