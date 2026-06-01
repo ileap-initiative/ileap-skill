@@ -3,7 +3,10 @@
     "allow": [
       "Bash(ileap *)",
       "Bash(cargo run -- *)",
-      "Bash(open /tmp/ileap-dashboard.html)"
+      "Bash(open /tmp/ileap-dashboard.html)",
+      "Write(/tmp/ileap-dashboard.html)",
+      "Bash(find *)",
+      "Bash(ls *)"
     ]
   }
 }
