@@ -1,7 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(bash -c *)",
+      "Bash(bash *)",
       "Bash(ileap *)",
       "Bash(python3 *)",
       "Bash(open /tmp/*)",
