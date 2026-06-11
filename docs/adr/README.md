@@ -50,15 +50,15 @@ not line-verified · **Claim** = delegated output, spot-checked.
 ### C3 — OData filter: only the first `-f` filter is forwarded for PACT `footprints`
 **Estimated impact:** Possible silent data-loss bug; low-effort fix.
 
-**Fact (`client.rs:269-271`, verified):** The PACT `footprints` endpoint does
-`if let Some(f) = filter.first()` → forwards only the first `-f` to the OData
-`$filter` param, silently dropping additional `-f` flags. The dry-run path mirrors
-this (`client.rs:235-237`). iLEAP-standalone endpoints loop over all filters
-(`get_kv_filters`, `client.rs:211-215`) and handle multiples correctly.
+**Fact (`client.rs:284-285`, re-verified 2026-06-11):** The PACT `footprints`
+endpoint does `if let Some(f) = filter.first()` → forwards only the first `-f` to
+the OData `$filter` param, silently dropping additional `-f` flags. The dry-run
+path mirrors this (`client.rs:250-251`). iLEAP-standalone endpoints loop over all
+filters (`get_kv_filters`, `client.rs:218,227`) and handle multiples correctly.
 
 **Fact:** The behaviour is *intentional* and carries an in-code comment
 ("PACT uses OData $filter; only a single expression is supported",
-`client.rs:268`). It is also visible via `--dry-run`, which shows only the first
+`client.rs:283`). It is also visible via `--dry-run`, which shows only the first
 filter in the request preview.
 
 **Inference:** Intentional, but still silent at runtime — a user passing
@@ -95,10 +95,11 @@ nothing."
 ### C5 — `merge_pages` copies all collected JSON values
 **Estimated impact:** Low; only matters for large paginated result sets.
 
-**Claim (`commands.rs:~185,188`):** `merge_pages` accumulates `serde_json::Value`
-objects across pages into a `Vec`, then clones during consolidation. For a tool
-fetching at most a few hundred records this is not a problem; for a future bulk
-export feature it could accumulate significant heap.
+**Fact (`commands.rs:175-189`, verified 2026-06-11):** `merge_pages` collects each
+page's `data` array into one `Vec<Value>` via `all_data.extend(data.iter().cloned())`
+(`commands.rs:186, 189`) — i.e. it deep-clones every record. For a tool fetching at
+most a few hundred records this is not a problem; for a future bulk-export feature
+it could accumulate significant heap.
 
 **Inference:** Low priority for the current use cases. Only worth an ADR if bulk
 export or streaming is planned.
