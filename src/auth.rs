@@ -384,10 +384,7 @@ mod tests {
         let _ = std::fs::remove_file(token_file(base_url, "bob").unwrap());
         save_token(base_url, "alice", &token).unwrap();
         assert!(load_saved_token(base_url, "bob").unwrap().is_none());
-        assert_eq!(
-            load_saved_token(base_url, "alice").unwrap(),
-            Some(token)
-        );
+        assert_eq!(load_saved_token(base_url, "alice").unwrap(), Some(token));
     }
 
     #[test]
