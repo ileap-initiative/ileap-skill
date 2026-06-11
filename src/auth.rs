@@ -203,28 +203,46 @@ mod tests {
     #[test]
     fn credential_error_username_only_exit_code_4() {
         let err = credential_error(Some("user"), None);
-        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert!(
+            matches!(err, CliError::Auth(_)),
+            "expected Auth variant, got: {err:?}"
+        );
         assert_eq!(err.exit_code(), 4);
         let msg = err.to_string();
-        assert!(msg.contains("--password"), "expected --password hint, got: {msg}");
+        assert!(
+            msg.contains("--password"),
+            "expected --password hint, got: {msg}"
+        );
     }
 
     #[test]
     fn credential_error_password_only_exit_code_4() {
         let err = credential_error(None, Some("pass"));
-        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert!(
+            matches!(err, CliError::Auth(_)),
+            "expected Auth variant, got: {err:?}"
+        );
         assert_eq!(err.exit_code(), 4);
         let msg = err.to_string();
-        assert!(msg.contains("--username"), "expected --username hint, got: {msg}");
+        assert!(
+            msg.contains("--username"),
+            "expected --username hint, got: {msg}"
+        );
     }
 
     #[test]
     fn credential_error_neither_exit_code_4() {
         let err = credential_error(None, None);
-        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert!(
+            matches!(err, CliError::Auth(_)),
+            "expected Auth variant, got: {err:?}"
+        );
         assert_eq!(err.exit_code(), 4);
         let msg = err.to_string();
-        assert!(msg.contains("not authenticated"), "expected 'not authenticated', got: {msg}");
+        assert!(
+            msg.contains("not authenticated"),
+            "expected 'not authenticated', got: {msg}"
+        );
     }
 
     // --- load_saved_token expiry boundary ---
@@ -276,9 +294,17 @@ mod tests {
     async fn run_auth_login_token_flag_saves_token() {
         let base_url = "http://test-run-auth-flag.invalid";
         let token = make_jwt(json!({"exp": 9999999999u64}));
-        run_auth(AuthCmd::Login, base_url, Some(&token), None, None, None, &OutputFormat::Compact)
-            .await
-            .unwrap();
+        run_auth(
+            AuthCmd::Login,
+            base_url,
+            Some(&token),
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
         assert_eq!(load_saved_token(base_url).unwrap(), Some(token));
     }
 
@@ -288,21 +314,42 @@ mod tests {
         let token = make_jwt(json!({"exp": 9999999999u64}));
         save_token(base_url, &token).unwrap();
         // No credentials — must succeed via cache without hitting any server
-        run_auth(AuthCmd::Login, base_url, None, None, None, None, &OutputFormat::Compact)
-            .await
-            .unwrap();
+        run_auth(
+            AuthCmd::Login,
+            base_url,
+            None,
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
     async fn run_auth_login_no_credentials_returns_exit_code_4() {
         let base_url = "http://test-run-auth-no-creds.invalid";
         let _ = std::fs::remove_file(token_file(base_url));
-        let err = run_auth(AuthCmd::Login, base_url, None, None, None, None, &OutputFormat::Compact)
-            .await
-            .unwrap_err();
+        let err = run_auth(
+            AuthCmd::Login,
+            base_url,
+            None,
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap_err();
         // err is anyhow::Error wrapping a CliError::Auth
-        let ce = err.downcast_ref::<CliError>().expect("expected CliError in chain");
-        assert!(matches!(ce, CliError::Auth(_)), "expected Auth variant, got: {ce:?}");
+        let ce = err
+            .downcast_ref::<CliError>()
+            .expect("expected CliError in chain");
+        assert!(
+            matches!(ce, CliError::Auth(_)),
+            "expected Auth variant, got: {ce:?}"
+        );
         assert_eq!(ce.exit_code(), 4);
     }
 
@@ -311,9 +358,17 @@ mod tests {
         let base_url = "http://test-run-auth-status-ok.invalid";
         let token = make_jwt(json!({"exp": 9999999999u64}));
         save_token(base_url, &token).unwrap();
-        run_auth(AuthCmd::Status, base_url, None, None, None, None, &OutputFormat::Compact)
-            .await
-            .unwrap();
+        run_auth(
+            AuthCmd::Status,
+            base_url,
+            None,
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
     }
 
     #[tokio::test]
@@ -321,8 +376,16 @@ mod tests {
         // Status with no cached token should still return Ok (prints authenticated: false)
         let base_url = "http://test-run-auth-status-none.invalid";
         let _ = std::fs::remove_file(token_file(base_url));
-        run_auth(AuthCmd::Status, base_url, None, None, None, None, &OutputFormat::Compact)
-            .await
-            .unwrap();
+        run_auth(
+            AuthCmd::Status,
+            base_url,
+            None,
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
     }
 }

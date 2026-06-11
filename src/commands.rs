@@ -233,8 +233,8 @@ mod tests {
 mod run_list_tests {
     use super::*;
     use serde_json::json;
-    use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
     use std::sync::Arc;
+    use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
 
     /// One page with fewer items than limit → exactly 1 fetch (short last page stops immediately).
     #[tokio::test]

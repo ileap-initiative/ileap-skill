@@ -40,7 +40,12 @@ fn bare_ileap_prints_help_and_exits_0() {
 fn auth_login_no_creds_non_tty_stdin_exits_4() {
     // `ileap auth login` with no credentials and non-terminal stdin must exit 4
     ileap()
-        .args(["--base-url", "http://no-creds-login-test.invalid", "auth", "login"])
+        .args([
+            "--base-url",
+            "http://no-creds-login-test.invalid",
+            "auth",
+            "login",
+        ])
         .env_remove("ILEAP_TOKEN")
         .env_remove("ILEAP_USERNAME")
         .env_remove("ILEAP_PASSWORD")
@@ -53,7 +58,6 @@ fn auth_login_no_creds_non_tty_stdin_exits_4() {
 // version
 // ---------------------------------------------------------------------------
 
-
 // ---------------------------------------------------------------------------
 // auth errors
 // ---------------------------------------------------------------------------
@@ -61,7 +65,12 @@ fn auth_login_no_creds_non_tty_stdin_exits_4() {
 #[test]
 fn no_auth_exits_4() {
     ileap()
-        .args(["--base-url", "http://no-auth-test.invalid", "shipments", "list"])
+        .args([
+            "--base-url",
+            "http://no-auth-test.invalid",
+            "shipments",
+            "list",
+        ])
         .env_remove("ILEAP_TOKEN")
         .env_remove("ILEAP_USERNAME")
         .env_remove("ILEAP_PASSWORD")
@@ -80,9 +89,12 @@ fn assert_auth_error_json(stderr: &str) {
 fn no_auth_compact_error_is_structured_json() {
     let output = ileap()
         .args([
-            "-o", "compact",
-            "--base-url", "http://no-auth-compact-test.invalid",
-            "shipments", "list",
+            "-o",
+            "compact",
+            "--base-url",
+            "http://no-auth-compact-test.invalid",
+            "shipments",
+            "list",
         ])
         .env_remove("ILEAP_TOKEN")
         .env_remove("ILEAP_USERNAME")
@@ -97,8 +109,10 @@ fn no_auth_compact_error_is_structured_json() {
 fn no_auth_pretty_error_is_also_structured_json() {
     let output = ileap()
         .args([
-            "--base-url", "http://no-auth-pretty-test.invalid",
-            "shipments", "list",
+            "--base-url",
+            "http://no-auth-pretty-test.invalid",
+            "shipments",
+            "list",
         ])
         .env_remove("ILEAP_TOKEN")
         .env_remove("ILEAP_USERNAME")
@@ -113,9 +127,12 @@ fn no_auth_pretty_error_is_also_structured_json() {
 fn username_without_password_exits_4() {
     ileap()
         .args([
-            "--base-url", "http://no-pw-test.invalid",
-            "--username", "user",
-            "shipments", "list",
+            "--base-url",
+            "http://no-pw-test.invalid",
+            "--username",
+            "user",
+            "shipments",
+            "list",
         ])
         .env_remove("ILEAP_TOKEN")
         .env_remove("ILEAP_PASSWORD")
@@ -132,14 +149,21 @@ fn username_without_password_exits_4() {
 fn dry_run_returns_request_info_without_hitting_server() {
     let output = ileap()
         .args([
-            "--token", "tok",
-            "--base-url", "http://dry-run-test.invalid",
-            "shipments", "list",
+            "--token",
+            "tok",
+            "--base-url",
+            "http://dry-run-test.invalid",
+            "shipments",
+            "list",
             "--dry-run",
         ])
         .output()
         .unwrap();
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let v: Value = serde_json::from_slice(&output.stdout).expect("stdout must be valid JSON");
     assert_eq!(v["dry_run"], true);
     assert_eq!(v["method"], "GET");
@@ -150,9 +174,13 @@ fn dry_run_returns_request_info_without_hitting_server() {
 fn dry_run_footprint_get_returns_request_info() {
     let output = ileap()
         .args([
-            "--token", "tok",
-            "--base-url", "http://dry-run-test.invalid",
-            "footprints", "get", "abc-123",
+            "--token",
+            "tok",
+            "--base-url",
+            "http://dry-run-test.invalid",
+            "footprints",
+            "get",
+            "abc-123",
             "--dry-run",
         ])
         .output()
@@ -176,8 +204,7 @@ async fn auto_mode_merges_pages() {
         .and(path("/v1/ileap/shipments"))
         .and(query_param("offset", "2"))
         .respond_with(
-            ResponseTemplate::new(200u16)
-                .set_body_json(serde_json::json!({"data": [{"id": "c"}]})),
+            ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": [{"id": "c"}]})),
         )
         .mount(&server)
         .await;
@@ -195,17 +222,26 @@ async fn auto_mode_merges_pages() {
 
     let output = ileap()
         .args([
-            "--token", "tok",
-            "--base-url", &server.uri(),
-            "-o", "compact",
-            "shipments", "list",
-            "--limit", "2",
+            "--token",
+            "tok",
+            "--base-url",
+            &server.uri(),
+            "-o",
+            "compact",
+            "shipments",
+            "list",
+            "--limit",
+            "2",
             "--yes",
         ])
         .output()
         .unwrap();
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let v: Value = serde_json::from_slice(&output.stdout).expect("stdout must be valid JSON");
     let items = v["data"].as_array().expect("expected data array");
     assert_eq!(items.len(), 3);
@@ -229,21 +265,35 @@ async fn max_pages_caps_pagination() {
 
     let output = ileap()
         .args([
-            "--token", "tok",
-            "--base-url", &server.uri(),
-            "-o", "compact",
-            "shipments", "list",
-            "--limit", "2",
+            "--token",
+            "tok",
+            "--base-url",
+            &server.uri(),
+            "-o",
+            "compact",
+            "shipments",
+            "list",
+            "--limit",
+            "2",
             "--yes",
-            "--max-pages", "1",
+            "--max-pages",
+            "1",
         ])
         .output()
         .unwrap();
 
-    assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+    assert!(
+        output.status.success(),
+        "stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     let v: Value = serde_json::from_slice(&output.stdout).expect("stdout must be valid JSON");
     let items = v["data"].as_array().expect("expected data array");
-    assert_eq!(items.len(), 2, "max-pages=1 should stop after the first page");
+    assert_eq!(
+        items.len(),
+        2,
+        "max-pages=1 should stop after the first page"
+    );
 
     let received = server.received_requests().await.unwrap();
     assert_eq!(received.len(), 1, "only one request should be sent");
