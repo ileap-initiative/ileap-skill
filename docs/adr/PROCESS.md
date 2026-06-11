@@ -64,8 +64,20 @@ code. A drift ledger whose own evidence has drifted is worse than none.
 - Synthesis, design decisions, the Fact/Claim distinction, and writing ADRs →
   keep on the strong model.
 - Always spot-check delegated conclusions before they enter ground truth (rule 1).
+  The kill rate is real: in the 2026-06-11 review, 2 of 13 agent claims headed
+  for documents died on a cheap grep (one false, one contradicting an Accepted
+  ADR).
 - A couple of targeted `grep`s often beats spawning an agent for a handful of
   line-ref confirmations — pick the cheaper tool for the actual breadth.
+- **Check the decision ledger before fanning out.** Read `docs/adr/README.md`
+  (index + backlog + dropped table) *before* launching review/research agents
+  and before synthesizing their output. It deduplicates (findings may already be
+  backlog candidates) and constrains (Accepted/Rejected ADRs veto findings that
+  would re-litigate them).
+- **Give subagents an output contract.** A subagent's final message is the only
+  channel back; one has already truncated its detail into a bare summary table.
+  Specify the shape ("max N findings, full detail each, no summary table") or
+  force structure via a schema.
 
 ## 6. Surface consequential side-effects; don't bury them
 
@@ -89,9 +101,20 @@ correction** before answering as-framed.
   that owns the decision. Items deferred to an ADR are fixed only when that ADR is
   implemented (don't "fix" a doc to describe behaviour that doesn't exist yet).
 
-## 8. Cybernetic habit
+## 8. Record rejected findings, not just accepted ones
+
+When a delegated finding (or your own) is investigated and *rejected*, record it
+in the README's "Dropped / Won't-ADR" table **with the reason** — especially when
+the reason is "false claim" or "contradicts ADR-NNNN". A future sweep over the
+same code will re-discover the same plausible-but-wrong finding; the ledger's
+dropped table is its immune memory. (Origin: a delegated review claimed the
+tokio `rt` feature was redundant; it is required by `current_thread` and was
+chosen deliberately in ADR-0001. Recording the rejection prevents the next
+session from re-raising it.)
+
+## 9. Cybernetic habit
 
 Each session, note what improved the working loop and adjust. The rules above are
 themselves outputs of that loop (collisions → single-writer; stale prose →
-git-as-oracle; rotted citations → re-verify-after-merge). Add new rules here when
-a failure mode recurs.
+git-as-oracle; rotted citations → re-verify-after-merge; re-raised dead findings
+→ record-rejections). Add new rules here when a failure mode recurs.
