@@ -159,13 +159,14 @@ impl Client {
             {
                 let body = resp.text().await.unwrap_or_default();
                 let backoff_ms = BACKOFF_BASE_MS * (1 << attempt);
-                let jitter_ms = if BACKOFF_BASE_MS > 0 {
+                #[cfg(test)]
+                let jitter_ms = 0;
+                #[cfg(not(test))]
+                let jitter_ms = {
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.subsec_millis() as u64 % 500)
                         .unwrap_or(0)
-                } else {
-                    0
                 };
                 let delay = Duration::from_millis(backoff_ms + jitter_ms);
                 eprintln!(
