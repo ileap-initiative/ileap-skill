@@ -250,7 +250,12 @@ impl Client {
         })
     }
 
-    pub fn footprints_dry_run(&self, limit: Option<u32>, offset: u32, filter: Option<&str>) -> Value {
+    pub fn footprints_dry_run(
+        &self,
+        limit: Option<u32>,
+        offset: u32,
+        filter: Option<&str>,
+    ) -> Value {
         let mut params = Self::base_params(limit, offset);
         if let Some(f) = filter {
             params.push(("$filter".into(), f.to_string()));
