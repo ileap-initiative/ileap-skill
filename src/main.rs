@@ -14,7 +14,7 @@ use client::ExitCode;
 use std::io::IsTerminal;
 use std::time::Duration;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let mut cli = Cli::parse();
     cli.base_url = cli.base_url.trim_end_matches('/').to_string();
