@@ -2,7 +2,8 @@
 
 ## Status
 
-Proposed
+Accepted — **implemented** in the working tree on `martin/adrs` (uncommitted as
+of 2026-06-11). See **Implementation** at the end of this document.
 
 ## Context
 
@@ -213,11 +214,16 @@ where
     E: Into<anyhow::Error>,
 ```
 
-The body is unchanged: `fetch(offset).await?` (`commands.rs:142,159`) still
-compiles because `run_list` returns `anyhow::Result<()>` and `?` applies the
-`Into<anyhow::Error>` conversion. With `E = anyhow::Error` (the current callers,
-and the state before ADR-0005), the bound is satisfied trivially, so this is
-backward-compatible on its own.
+At the two fetch sites (`commands.rs:142,159`), change `fetch(offset).await?` to
+`fetch(offset).await.map_err(Into::into)?`. **Bare `?` will NOT compile** with
+this bound: `?` desugars to `From::from`, and `anyhow::Error`'s `From<E>` impl
+requires `E: std::error::Error + Send + Sync + 'static` — stricter than, and not
+implied by, `E: Into<anyhow::Error>`. (In particular `anyhow::Error` is itself
+*not* `std::error::Error`, so the existing `E = anyhow::Error` callers would fail
+under bare `?`.) `.map_err(Into::into)` invokes the `Into` bound directly and
+works for both the current `anyhow::Error` closures and ADR-0005's `CliError`.
+This is why the bound is `Into<anyhow::Error>` and not `std::error::Error` —
+the latter would reject the existing `anyhow::Error`-returning closures.
 
 ### 2. Add unit tests for `run_list` pagination
 
@@ -300,3 +306,30 @@ cargo clippy                # no warnings about unused pub(crate)
 
 No changes to `src/client.rs`, `src/main.rs`, `Cargo.toml`, or
 `tests/integration.rs` are required.
+
+## Implementation
+
+Implemented on branch `martin/adrs` (working tree, **uncommitted** as of
+2026-06-11), confined to `src/commands.rs`. Verified: `cargo build` pass;
+`cargo test` pass (**32 unit** (+4) **+ 10 integration**, 0 failed); `cargo
+clippy` introduced no new findings (the `client.rs:152` error is pre-existing
+and unrelated).
+
+- **§1:** `run_list` is now `pub(crate)` with the generalized bound
+  `Fut: Future<Output = std::result::Result<Value, E>>, E: Into<anyhow::Error>`.
+  The two fetch sites use `.map_err(Into::into)?` (see the corrected note in §1
+  — bare `?` does not compile under this bound). The existing `run_cmd` closures
+  (returning `anyhow::Result<Value>`) compile unchanged.
+- **§2:** added four in-process `#[tokio::test]` cases in a `run_list_tests`
+  module, each driving `run_list` with a canned `async move` closure and an
+  `Arc<AtomicU32>` fetch counter (no wiremock, no subprocess):
+  `run_list_stops_on_partial_last_page` (1 fetch),
+  `run_list_paginates_until_short_page` (3 fetches),
+  `run_list_max_pages_caps_fetches` (2 fetches),
+  `run_list_no_limit_single_fetch` (1 fetch — infinite-loop guard).
+  These supersede the illustrative skeleton in §2 above.
+
+**Lesson recorded:** the original §1 claimed bare `?` would compile under the
+`Into<anyhow::Error>` bound. It does not (`?` uses `From`, whose anyhow impl is
+bounded on `std::error::Error`). The text above is corrected; whoever implements
+ADR-0005 should rely on the corrected version.

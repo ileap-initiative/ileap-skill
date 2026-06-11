@@ -20,7 +20,7 @@ and never re-states a fix; this index owns the decisions.
 | [0001](0001-minimize-tokio-runtime-footprint.md) | Keep async, minimize tokio runtime footprint | **Accepted** | Replace `features = ["full"]` with `["macros", "rt", "time"]`; use `current_thread` flavour |
 | [0002](0002-remove-interactive-repl.md) | Remove the interactive REPL; bare `ileap` prints help | **Accepted** | Delete `repl.rs`; bare `ileap` prints clap help (exit 0); move interactive credential prompt into `auth login` (TTY only) |
 | [0003](0003-deduplicate-resource-dispatch.md) | Deduplicate the 5× iLEAP resource dispatch | Proposed | `macro_rules!` body-expansion for the 5 standalone arms; `footprints` stays explicit (was C1) |
-| [0004](0004-client-trait-abstraction.md) | Do *not* add an `ApiClient` trait; extract pure logic | Proposed | No trait seam; make `run_list` `pub(crate)` + add in-process pagination unit tests; retry stays under wiremock (was C2) |
+| [0004](0004-client-trait-abstraction.md) | Do *not* add an `ApiClient` trait; extract pure logic | **Accepted** (implemented) | No trait seam; make `run_list` `pub(crate)` + generalize error bound + add in-process pagination unit tests; retry stays under wiremock (was C2) |
 | [0005](0005-typed-errors-with-thiserror.md) | Typed errors with `thiserror` at the client/auth boundary | Proposed | Hybrid: `CliError` enum (thiserror) in `client`/`auth`; `anyhow` above; `main` maps exit codes via typed match |
 
 **Implementation order** (0001+0002 accepted as baseline): the remaining three
