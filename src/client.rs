@@ -250,10 +250,10 @@ impl Client {
         })
     }
 
-    pub fn footprints_dry_run(&self, limit: Option<u32>, offset: u32, filter: &[String]) -> Value {
+    pub fn footprints_dry_run(&self, limit: Option<u32>, offset: u32, filter: Option<&str>) -> Value {
         let mut params = Self::base_params(limit, offset);
-        if let Some(f) = filter.first() {
-            params.push(("$filter".into(), f.clone()));
+        if let Some(f) = filter {
+            params.push(("$filter".into(), f.to_string()));
         }
         self.dry_run_value("/2/footprints", params)
     }
@@ -282,12 +282,13 @@ impl Client {
         &self,
         limit: Option<u32>,
         offset: u32,
-        filter: &[String],
+        filter: Option<&str>,
     ) -> std::result::Result<Value, CliError> {
         let mut params = Self::base_params(limit, offset);
-        // PACT uses OData $filter; only a single expression is supported
-        if let Some(f) = filter.first() {
-            params.push(("$filter".into(), f.clone()));
+        // PACT uses OData $filter; only a single expression is supported.
+        // Passing more than one -f is rejected at the dispatch layer (ADR-0008).
+        if let Some(f) = filter {
+            params.push(("$filter".into(), f.to_string()));
         }
         self.get("/2/footprints", params).await
     }
@@ -350,7 +351,7 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use wiremock::matchers::{method, path};
+    use wiremock::matchers::{method, path, query_param};
     use wiremock::{Mock, MockServer, ResponseTemplate};
 
     async fn client(server: &MockServer) -> Client {
@@ -376,7 +377,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result = client(&server).await.footprints(None, 0, &[]).await;
+        let result = client(&server).await.footprints(None, 0, None).await;
         assert!(
             result.is_ok(),
             "expected success after 429 retry, got: {result:?}"
@@ -402,7 +403,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result = client(&server).await.footprints(None, 0, &[]).await;
+        let result = client(&server).await.footprints(None, 0, None).await;
         assert!(
             result.is_ok(),
             "expected success after 500 retry, got: {result:?}"
@@ -443,13 +444,33 @@ mod tests {
 
         let err = client(&server)
             .await
-            .footprints(None, 0, &[])
+            .footprints(None, 0, None)
             .await
             .unwrap_err();
         assert!(
             matches!(err, CliError::Auth(_)),
             "expected Auth, got: {err:?}"
         );
+    }
+
+    #[tokio::test]
+    async fn footprints_sends_single_odata_filter_param() {
+        let server = MockServer::start().await;
+
+        Mock::given(method("GET"))
+            .and(path("/2/footprints"))
+            .and(query_param("$filter", "created lt '2024-01-01'"))
+            .respond_with(
+                ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": []})),
+            )
+            .mount(&server)
+            .await;
+
+        let result = client(&server)
+            .await
+            .footprints(None, 0, Some("created lt '2024-01-01'"))
+            .await;
+        assert!(result.is_ok(), "expected $filter to match, got: {result:?}");
     }
 
     #[tokio::test]
@@ -462,7 +483,7 @@ mod tests {
             .mount(&server)
             .await;
 
-        let result = client(&server).await.footprints(None, 0, &[]).await;
+        let result = client(&server).await.footprints(None, 0, None).await;
         assert!(result.is_err(), "expected error after retries exhausted");
 
         let received = server.received_requests().await.unwrap();

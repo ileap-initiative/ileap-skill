@@ -116,9 +116,11 @@ pub struct ListArgs {
     #[arg(long, short = 'l')]
     pub limit: Option<u32>,
 
-    /// Filter expression (repeatable).
+    /// Filter expression (repeatable for iLEAP standalone endpoints).
     ///
-    /// PACT-based endpoints use OData syntax: -f "created lt '2024-01-01T00:00:00Z'"
+    /// PACT-based endpoints (footprints) use OData syntax and accept at most
+    /// one -f; combine conditions in a single expression with `and`:
+    /// -f "created lt '2024-01-01T00:00:00Z' and status eq 'active'"
     ///
     /// iLEAP standalone endpoints use key=value pairs: -f mode=road
     /// To retrieve a single resource by ID: -f id=abc-123

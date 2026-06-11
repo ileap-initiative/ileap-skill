@@ -5,6 +5,7 @@ use std::io::IsTerminal;
 
 use crate::cli::{Command, FootprintsCmd, ListCmd, OutputFormat};
 use crate::client::Client;
+use crate::error::CliError;
 use crate::output;
 use crate::pager::{item_count, print_page};
 
@@ -12,15 +13,25 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
     match cmd {
         Command::Footprints { cmd } => match cmd {
             FootprintsCmd::List(args) => {
+                // PACT supports a single OData $filter expression (ADR-0008);
+                // reject extra -f flags instead of silently dropping them.
+                if args.filter.len() > 1 {
+                    return Err(CliError::Other(format!(
+                        "PACT footprints accepts at most one --filter; got {}. \
+                         Combine conditions in one OData expression, e.g. -f \"{} and {}\"",
+                        args.filter.len(),
+                        args.filter[0],
+                        args.filter[1]
+                    ))
+                    .into());
+                }
+                let filter = args.filter.first().map(String::as_str);
                 if args.dry_run {
-                    output::print_value(
-                        &client.footprints_dry_run(args.limit, 0, &args.filter),
-                        output,
-                    );
+                    output::print_value(&client.footprints_dry_run(args.limit, 0, filter), output);
                     return Ok(());
                 }
                 run_list(args.yes, args.max_pages, args.limit, output, |off| {
-                    client.footprints(args.limit, off, &args.filter)
+                    client.footprints(args.limit, off, filter)
                 })
                 .await?;
             }
@@ -226,6 +237,40 @@ mod tests {
         let merged = merge_pages(vec![p1, p2]);
         let items = merged.as_array().unwrap();
         assert_eq!(items.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod filter_validation_tests {
+    use super::*;
+    use crate::cli::ListArgs;
+
+    /// More than one -f for PACT footprints is an error naming both expressions,
+    /// checked before any request (dry_run would short-circuit right after).
+    #[tokio::test]
+    async fn footprints_list_rejects_multiple_filters() {
+        let client = Client::from_token("http://filter-test.invalid", "tok".into(), None);
+        let args = ListArgs {
+            filter: vec!["a eq 1".into(), "b eq 2".into()],
+            dry_run: true,
+            ..Default::default()
+        };
+        let err = run_cmd(
+            &client,
+            Command::Footprints {
+                cmd: FootprintsCmd::List(args),
+            },
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap_err();
+        let ce = err.downcast_ref::<CliError>().expect("expected CliError");
+        assert!(matches!(ce, CliError::Other(_)), "got: {ce:?}");
+        let msg = ce.to_string();
+        assert!(
+            msg.contains("a eq 1") && msg.contains("b eq 2"),
+            "error must name the conflicting filters, got: {msg}"
+        );
     }
 }
 
