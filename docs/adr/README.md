@@ -19,16 +19,15 @@ and never re-states a fix; this index owns the decisions.
 |---|-------|--------|--------------|
 | [0001](0001-minimize-tokio-runtime-footprint.md) | Keep async, minimize tokio runtime footprint | **Accepted** | Replace `features = ["full"]` with `["macros", "rt", "time"]`; use `current_thread` flavour |
 | [0002](0002-remove-interactive-repl.md) | Remove the interactive REPL; bare `ileap` prints help | **Accepted** | Delete `repl.rs`; bare `ileap` prints clap help (exit 0); move interactive credential prompt into `auth login` (TTY only) |
-| [0003](0003-deduplicate-resource-dispatch.md) | Deduplicate the 5× iLEAP resource dispatch | Proposed | `macro_rules!` body-expansion for the 5 standalone arms; `footprints` stays explicit (was C1) |
+| [0003](0003-deduplicate-resource-dispatch.md) | Deduplicate the 5× iLEAP resource dispatch | **Rejected** | Not adopted; the 5 explicit dispatch arms stay. (was C1) |
 | [0004](0004-client-trait-abstraction.md) | Do *not* add an `ApiClient` trait; extract pure logic | Proposed | No trait seam; make `run_list` `pub(crate)` + add in-process pagination unit tests; retry stays under wiremock (was C2) |
 | [0005](0005-typed-errors-with-thiserror.md) | Typed errors with `thiserror` at the client/auth boundary | Proposed | Hybrid: `CliError` enum (thiserror) in `client`/`auth`; `anyhow` above; `main` maps exit codes via typed match |
 
-**Implementation order** (0001+0002 accepted as baseline): the remaining three
-have one hard dependency — **0004 → 0005 → 0003**. 0004 generalizes `run_list`'s
-error bound; 0005's typed `Client` errors depend on that bound to compile; 0003's
-macro then composes for free. 0004 and 0005 are otherwise independent of the
-accepted baseline; only 0005 touches baseline code (the `auth login` prompt path
-added by 0002, and `main`'s error block).
+**Implementation order** (0001+0002 accepted as baseline): **0004 → 0005**
+(0003 is **Rejected**). 0004 generalizes `run_list`'s error bound; 0005's typed
+`Client` errors depend on that bound to compile. 0004 and 0005 are otherwise
+independent of the accepted baseline; only 0005 touches baseline code (the
+`auth login` prompt path added by 0002, and `main`'s error block).
 
 ---
 
@@ -43,9 +42,10 @@ not line-verified · **Claim** = delegated output, spot-checked.
 
 ---
 
-> **C1 promoted → [ADR-0003](0003-deduplicate-resource-dispatch.md)** (corrected
-> to 5× + 1 outlier during drafting). **C2 promoted → [ADR-0004](0004-client-trait-abstraction.md)**
-> (decision: *do not* add a trait; extract pure logic instead).
+> **C1 → [ADR-0003](0003-deduplicate-resource-dispatch.md): Rejected** — the
+> dispatch dedup was not pursued; the 5 explicit arms stay. **C2 promoted →
+> [ADR-0004](0004-client-trait-abstraction.md)** (decision: *do not* add a trait;
+> extract pure logic instead).
 
 ### C3 — OData filter: only the first `-f` filter is forwarded for PACT `footprints`
 **Estimated impact:** Possible silent data-loss bug; low-effort fix.
