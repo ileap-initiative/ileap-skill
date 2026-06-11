@@ -11,24 +11,30 @@ use crate::error::CliError;
 use crate::output;
 use crate::prompt::{prompt, prompt_password};
 
-fn token_file(base_url: &str) -> PathBuf {
-    let name = base_url
-        .trim_start_matches("https://")
-        .trim_start_matches("http://")
-        .replace(['/', ':', '.', '-'], "_");
-    dirs::config_dir()
-        .unwrap_or_else(|| PathBuf::from("."))
-        .join("ileap")
-        .join(format!("token_{name}"))
+fn token_file(base_url: &str) -> Result<PathBuf> {
+    // The scheme stays in the name so http:// and https:// tokens for the
+    // same host never share a cache file (ADR-0006).
+    let name = base_url.replace(['/', ':', '.', '-'], "_");
+    let config_dir = dirs::config_dir()
+        .context("cannot determine config directory; set HOME or XDG_CONFIG_HOME")?;
+    Ok(config_dir.join("ileap").join(format!("token_{name}")))
 }
 
 pub fn save_token(base_url: &str, token: &str) -> Result<()> {
-    let path = token_file(base_url);
+    let path = token_file(base_url)?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)
             .with_context(|| format!("failed to create config directory at {}", dir.display()))?;
     }
-    std::fs::write(&path, token)
+    let mut opts = std::fs::OpenOptions::new();
+    opts.write(true).create(true).truncate(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        opts.mode(0o600);
+    }
+    opts.open(&path)
+        .and_then(|mut f| std::io::Write::write_all(&mut f, token.as_bytes()))
         .with_context(|| format!("failed to save token to {}", path.display()))
 }
 
@@ -40,7 +46,7 @@ pub fn jwt_exp(token: &str) -> Option<u64> {
 }
 
 pub fn load_saved_token(base_url: &str) -> Result<Option<String>> {
-    let path = token_file(base_url);
+    let path = token_file(base_url)?;
     let t = match std::fs::read_to_string(&path) {
         Ok(s) => s,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -178,6 +184,30 @@ mod tests {
             .unwrap_or(0)
     }
 
+    // --- token_file ---
+
+    #[test]
+    fn token_file_distinguishes_schemes() {
+        let http = token_file("http://api.example.com").unwrap();
+        let https = token_file("https://api.example.com").unwrap();
+        assert_ne!(http, https);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn save_token_sets_owner_only_permissions() {
+        use std::os::unix::fs::PermissionsExt;
+        let base_url = "http://test-token-perms.invalid";
+        // Remove any leftover file so we exercise the creation path
+        let _ = std::fs::remove_file(token_file(base_url).unwrap());
+        save_token(base_url, "tok").unwrap();
+        let mode = std::fs::metadata(token_file(base_url).unwrap())
+            .unwrap()
+            .permissions()
+            .mode();
+        assert_eq!(mode & 0o777, 0o600);
+    }
+
     // --- jwt_exp ---
 
     #[test]
@@ -284,7 +314,7 @@ mod tests {
     #[test]
     fn load_saved_token_missing_file_returns_none() {
         let base_url = "http://test-no-file-present.invalid";
-        let _ = std::fs::remove_file(token_file(base_url));
+        let _ = std::fs::remove_file(token_file(base_url).unwrap());
         assert!(load_saved_token(base_url).unwrap().is_none());
     }
 
@@ -349,7 +379,7 @@ mod tests {
     async fn run_auth_status_without_token_is_ok() {
         // Status with no cached token should still return Ok (prints authenticated: false)
         let base_url = "http://test-run-auth-status-none.invalid";
-        let _ = std::fs::remove_file(token_file(base_url));
+        let _ = std::fs::remove_file(token_file(base_url).unwrap());
         run_auth(
             AuthCmd::Status,
             base_url,
