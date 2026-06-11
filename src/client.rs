@@ -123,7 +123,11 @@ impl Client {
         &self.token
     }
 
-    async fn get(&self, path: &str, params: Vec<(String, String)>) -> std::result::Result<Value, CliError> {
+    async fn get(
+        &self,
+        path: &str,
+        params: Vec<(String, String)>,
+    ) -> std::result::Result<Value, CliError> {
         let url = format!("{}{}", self.base_url, path);
         const MAX_RETRIES: u32 = 2;
         let mut attempt = 0u32;
@@ -155,13 +159,14 @@ impl Client {
             {
                 let body = resp.text().await.unwrap_or_default();
                 let backoff_ms = BACKOFF_BASE_MS * (1 << attempt);
-                let jitter_ms = if BACKOFF_BASE_MS > 0 {
+                #[cfg(test)]
+                let jitter_ms = 0;
+                #[cfg(not(test))]
+                let jitter_ms = {
                     std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
                         .map(|d| d.subsec_millis() as u64 % 500)
                         .unwrap_or(0)
-                } else {
-                    0
                 };
                 let delay = Duration::from_millis(backoff_ms + jitter_ms);
                 eprintln!(
@@ -297,7 +302,8 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> std::result::Result<Value, CliError> {
-        self.get_kv_filters("/v1/ileap/shipments", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/shipments", limit, offset, filters)
+            .await
     }
 
     pub async fn tocs(
@@ -306,7 +312,8 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> std::result::Result<Value, CliError> {
-        self.get_kv_filters("/v1/ileap/tocs", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/tocs", limit, offset, filters)
+            .await
     }
 
     pub async fn hocs(
@@ -315,7 +322,8 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> std::result::Result<Value, CliError> {
-        self.get_kv_filters("/v1/ileap/hocs", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/hocs", limit, offset, filters)
+            .await
     }
 
     pub async fn tad(
@@ -324,7 +332,8 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> std::result::Result<Value, CliError> {
-        self.get_kv_filters("/v1/ileap/tad", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/tad", limit, offset, filters)
+            .await
     }
 
     pub async fn aed(
@@ -333,7 +342,8 @@ impl Client {
         offset: u32,
         filters: &[String],
     ) -> std::result::Result<Value, CliError> {
-        self.get_kv_filters("/v1/ileap/aed", limit, offset, filters).await
+        self.get_kv_filters("/v1/ileap/aed", limit, offset, filters)
+            .await
     }
 }
 
@@ -353,7 +363,9 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/2/footprints"))
-            .respond_with(ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": []})))
+            .respond_with(
+                ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": []})),
+            )
             .mount(&server)
             .await;
 
@@ -365,7 +377,10 @@ mod tests {
             .await;
 
         let result = client(&server).await.footprints(None, 0, &[]).await;
-        assert!(result.is_ok(), "expected success after 429 retry, got: {result:?}");
+        assert!(
+            result.is_ok(),
+            "expected success after 429 retry, got: {result:?}"
+        );
     }
 
     #[tokio::test]
@@ -374,7 +389,9 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/2/footprints"))
-            .respond_with(ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": []})))
+            .respond_with(
+                ResponseTemplate::new(200u16).set_body_json(serde_json::json!({"data": []})),
+            )
             .mount(&server)
             .await;
 
@@ -386,7 +403,10 @@ mod tests {
             .await;
 
         let result = client(&server).await.footprints(None, 0, &[]).await;
-        assert!(result.is_ok(), "expected success after 500 retry, got: {result:?}");
+        assert!(
+            result.is_ok(),
+            "expected success after 500 retry, got: {result:?}"
+        );
     }
 
     #[tokio::test]
@@ -395,12 +415,17 @@ mod tests {
 
         Mock::given(method("GET"))
             .and(path("/2/footprints/nope"))
-            .respond_with(ResponseTemplate::new(404u16).set_body_json(serde_json::json!("not found")))
+            .respond_with(
+                ResponseTemplate::new(404u16).set_body_json(serde_json::json!("not found")),
+            )
             .mount(&server)
             .await;
 
         let err = client(&server).await.footprint("nope").await.unwrap_err();
-        assert!(matches!(err, CliError::NotFound(_)), "expected NotFound, got: {err:?}");
+        assert!(
+            matches!(err, CliError::NotFound(_)),
+            "expected NotFound, got: {err:?}"
+        );
 
         let received = server.received_requests().await.unwrap();
         assert_eq!(received.len(), 1, "404 must not be retried");
@@ -416,8 +441,15 @@ mod tests {
             .mount(&server)
             .await;
 
-        let err = client(&server).await.footprints(None, 0, &[]).await.unwrap_err();
-        assert!(matches!(err, CliError::Auth(_)), "expected Auth, got: {err:?}");
+        let err = client(&server)
+            .await
+            .footprints(None, 0, &[])
+            .await
+            .unwrap_err();
+        assert!(
+            matches!(err, CliError::Auth(_)),
+            "expected Auth, got: {err:?}"
+        );
     }
 
     #[tokio::test]

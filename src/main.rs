@@ -21,14 +21,13 @@ async fn main() {
 
     if let Err(e) = run(cli).await {
         // Attempt to recover the typed error before it is fully erased.
-        let (exit_code, error_type, message) =
-            if let Some(ce) = e.downcast_ref::<CliError>() {
-                (ce.exit_code(), ce.error_type(), ce.to_string())
-            } else {
-                // Fallback for errors that never passed through CliError
-                // (e.g. I/O errors from tty or pager).
-                (1, "error", e.to_string())
-            };
+        let (exit_code, error_type, message) = if let Some(ce) = e.downcast_ref::<CliError>() {
+            (ce.exit_code(), ce.error_type(), ce.to_string())
+        } else {
+            // Fallback for errors that never passed through CliError
+            // (e.g. I/O errors from tty or pager).
+            (1, "error", e.to_string())
+        };
 
         let json = serde_json::json!({
             "cli_error": { "type": error_type, "message": message }

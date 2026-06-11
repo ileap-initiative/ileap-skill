@@ -4,7 +4,11 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[command(name = "ileap", about = "CLI tool for iLEAP API", version)]
 pub struct Cli {
     /// API base URL
-    #[arg(long, env = "ILEAP_BASE_URL", default_value = "https://ileap-preview.fly.dev")]
+    #[arg(
+        long,
+        env = "ILEAP_BASE_URL",
+        default_value = "https://ileap-preview.fly.dev"
+    )]
     pub base_url: String,
 
     /// Bearer token (use `auth` to obtain one). When set, --username and --password are not required.
