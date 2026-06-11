@@ -110,7 +110,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 ## Checked — no drift (recorded so they aren't re-investigated)
 
-- **Default base URL** `https://ileap-preview.fly.dev` — matches `cli.rs:7`.
+- **Default base URL** `https://api.preview.ileap.dev` — matches `cli.rs:10`.
 - **Exit codes** 0/1/3/4 — match `error.rs` (`CliError::exit_code`, lines 22-26)
   and `main.rs` (downcast mapping, lines 24-26). Note: the mapping moved from
   `client.rs`'s old `ExitCode` to `error.rs` in ADR-0005; still 0/1/3/4.
