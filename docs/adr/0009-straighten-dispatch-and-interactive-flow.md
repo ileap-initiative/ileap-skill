@@ -2,7 +2,12 @@
 
 ## Status
 
-Proposed (2026-06-11). Bundles four review findings that share one theme:
+Proposed (2026-06-11) — **implemented** in
+[PR #16](https://github.com/sine-fdn/ileap-cli/pull/16)
+(branch `adr-0009-straighten-dispatch`, stacked on ADR-0007's branch per the
+sequencing note below). See **Implementation** at the end of this document.
+
+Bundles four review findings that share one theme:
 **any single user action should read top-to-bottom in one place** (the
 project's "almost naive" style goal). Respects ADR-0003 (Rejected — the 5×
 resource dispatch arms stay) and ADR-0004/0005 (Accepted — generic `run_list`
@@ -142,3 +147,49 @@ cargo build && cargo clippy --all-targets -- -D warnings && cargo test
 Manually: `ileap auth login --username alice` (TTY) prompts only
 `Password:`; `ileap shipments list -l 2` pages interactively as before;
 `grep -rn "unreachable!" src/` is empty.
+
+## Implementation
+
+Implemented on branch `adr-0009-straighten-dispatch`
+([PR #16](https://github.com/sine-fdn/ileap-cli/pull/16), 2026-06-11),
+**stacked on `adr-0007-pagination-loop-correctness`** (PR #14) as the
+sequencing section requires — the two share the `run_list` edits. Verified:
+`cargo build` pass; `cargo clippy --all-targets -- -D warnings` clean;
+`cargo test` pass (**36 unit + 12 integration, 0 failed**); the behavioral
+oracles (exit codes 0/3/4, JSON error shape, pagination tests) pass unchanged.
+
+**Files:** `src/auth.rs` (§1), `src/commands.rs` (§2, §4), `src/main.rs` (§3),
+`src/pager.rs` **deleted** (§4), `tests/integration.rs` (§5).
+
+**Deviations from the Changes text (recorded for accuracy):**
+- **§2's "client resolved lazily" met a language constraint the sketch
+  missed:** Rust cannot narrow an enum across two `match`es, so handling
+  `Auth` first and then matching the "remaining" commands would have
+  re-required an `unreachable!` arm. Implemented instead as a **single
+  exhaustive match** — the `Auth` arm calls `run_auth`; each resource arm
+  starts with `let client = resolve().await?` where `resolve` is a local
+  closure over the credential params. Same effect (no panic arm, lazy
+  resolution), different shape. Future Changes sections that restructure
+  control flow deserve a compile-level sanity check at ADR time.
+- **`run_cmd` takes individual `Option<&str>` params** (with
+  `#[allow(clippy::too_many_arguments)]`), not the "small struct" alternative
+  the ADR offered — fewer moving parts for a 7-value pass-through.
+- **§4 went further than "reduce `print_page` to printing":** with the prompt
+  moved into the loop, `print_page` was a bare `output::print_value` call, so
+  it was deleted rather than kept as a wrapper; `item_count` + its four tests
+  moved to `commands.rs` and `pager.rs` was removed (the option the ADR
+  anticipated).
+- **The verify step's "`grep unreachable!` is empty" is not met literally:**
+  one pre-existing instance remains in `credential_error` (`auth.rs`,
+  "called with both credentials present"). It asserts that function's own
+  precondition rather than the cross-module dispatch invariant this ADR
+  targeted; left in place deliberately.
+- **§5's PTY-based "username not re-prompted" test was not feasible** in the
+  `assert_cmd` harness (no PTY); covered instead by the non-TTY integration
+  test (`auth_login_username_only_non_tty_names_missing_password`) plus
+  `resolve_client` unit tests (token-flag priority, cache fallback,
+  no-credentials → `CliError::Auth`).
+
+**Conflict note:** shares the footprints dispatch arm with ADR-0008
+([PR #15](https://github.com/sine-fdn/ileap-cli/pull/15)); whichever merges
+second rebases that one arm.
