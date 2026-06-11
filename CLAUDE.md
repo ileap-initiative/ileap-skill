@@ -1,6 +1,7 @@
 # CLAUDE.md
 
-Instructions for this repo live in **[AGENTS.md](./AGENTS.md)** — read it first.
+This file is the only memory file Claude Code auto-loads. It acts as a thin hub:
+the canonical instructions live in AGENTS.md and are imported below so they load
+automatically (Claude Code does not auto-load AGENTS.md on its own).
 
-It is the single source of truth for working with the iLEAP CLI (`src/`) and the
-iLEAP CLI skill. This file only exists so Claude Code picks it up automatically.
+@AGENTS.md
