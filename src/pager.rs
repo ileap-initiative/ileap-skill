@@ -3,7 +3,7 @@ use serde_json::Value;
 
 use crate::cli::OutputFormat;
 use crate::output;
-use crate::tty::prompt;
+use crate::prompt::prompt;
 
 pub fn item_count(value: &Value) -> usize {
     match value {

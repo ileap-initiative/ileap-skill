@@ -8,6 +8,48 @@ fn ileap() -> Command {
 }
 
 // ---------------------------------------------------------------------------
+// no-subcommand help
+// ---------------------------------------------------------------------------
+
+#[test]
+fn bare_ileap_prints_help_and_exits_0() {
+    // bare `ileap` (no subcommand) must print help to stdout and exit 0
+    let output = ileap()
+        .env_remove("ILEAP_TOKEN")
+        .env_remove("ILEAP_USERNAME")
+        .env_remove("ILEAP_PASSWORD")
+        .output()
+        .unwrap();
+    assert!(
+        output.status.success(),
+        "expected exit 0, got: {}",
+        output.status
+    );
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("Usage") || stdout.contains("shipments"),
+        "expected help text in stdout, got: {stdout}"
+    );
+}
+
+// ---------------------------------------------------------------------------
+// auth login non-TTY credential error
+// ---------------------------------------------------------------------------
+
+#[test]
+fn auth_login_no_creds_non_tty_stdin_exits_4() {
+    // `ileap auth login` with no credentials and non-terminal stdin must exit 4
+    ileap()
+        .args(["--base-url", "http://no-creds-login-test.invalid", "auth", "login"])
+        .env_remove("ILEAP_TOKEN")
+        .env_remove("ILEAP_USERNAME")
+        .env_remove("ILEAP_PASSWORD")
+        .assert()
+        .failure()
+        .code(4);
+}
+
+// ---------------------------------------------------------------------------
 // version
 // ---------------------------------------------------------------------------
 

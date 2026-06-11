@@ -4,17 +4,15 @@ mod client;
 mod commands;
 mod output;
 mod pager;
-mod repl;
-mod tty;
+mod prompt;
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use cli::{Cli, Command, OutputFormat};
 use client::ExitCode;
-use std::io::IsTerminal;
 use std::time::Duration;
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() {
     let mut cli = Cli::parse();
     cli.base_url = cli.base_url.trim_end_matches('/').to_string();
@@ -57,32 +55,8 @@ async fn run(cli: Cli) -> Result<()> {
 
     match cli.command {
         None => {
-            if !std::io::stdin().is_terminal() {
-                anyhow::bail!(
-                    "no command provided and stdin is not a terminal — use a subcommand (run with --help to see available commands)"
-                );
-            }
-            let client = match auth::load_saved_token(&cli.base_url) {
-                Ok(Some(t)) => client::Client::from_token(&cli.base_url, t, timeout),
-                Ok(None) => {
-                    let username = tty::prompt("Username: ")?;
-                    let password = tty::prompt_password("Password: ")?;
-                    let c = client::Client::authenticate(&cli.base_url, &username, &password, timeout)
-                        .await?;
-                    auth::save_token(&cli.base_url, c.token())?;
-                    c
-                }
-                Err(e) => {
-                    eprintln!("warning: {e}; continuing with interactive login");
-                    let username = tty::prompt("Username: ")?;
-                    let password = tty::prompt_password("Password: ")?;
-                    let c = client::Client::authenticate(&cli.base_url, &username, &password, timeout)
-                        .await?;
-                    auth::save_token(&cli.base_url, c.token())?;
-                    c
-                }
-            };
-            repl::run_repl(client, &output).await?;
+            Cli::command().print_help()?;
+            println!();
         }
 
         Some(Command::Auth { cmd }) => {

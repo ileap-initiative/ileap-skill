@@ -2,7 +2,8 @@
 
 ## Status
 
-Accepted
+Accepted — **implemented** in the working tree on `martin/adrs` (uncommitted as
+of 2026-06-11). See **Implementation** at the end of this document.
 
 ## Context
 
@@ -160,3 +161,31 @@ for ad-hoc human use.
    should break; add integration tests asserting (a) bare `ileap` prints help and
    exits 0, and (b) `auth login` with no creds and non-TTY stdin still returns
    the auth error (exit 4).
+
+## Implementation
+
+Implemented on branch `martin/adrs` (working tree, **uncommitted** as of
+2026-06-11). Verified: `cargo build` pass; `cargo test` pass (28 unit + 10
+integration, 0 failed). `cargo clippy` introduced no new findings — the single
+remaining error (`client.rs:152`, `absurd_extreme_comparisons`) is pre-existing
+and unrelated to this change.
+
+**What landed (mapped to Changes above):**
+- §1–2: `src/repl.rs` deleted; `mod repl;` removed from `main.rs`.
+- §3: `main.rs` `None` arm is now `Cli::command().print_help()?; println!();`
+  (added `use clap::CommandFactory;`).
+- §4: removed the now-unused `use std::io::IsTerminal;` from `main.rs`.
+- §5 (A2): `auth::run_auth` / `AuthCmd::Login` prompts for username + password
+  when stdin is a TTY, and returns `credential_error` (exit 4) when it is not.
+- §6: `README.md` updated. `SKILL.md` needed **no** change — its "interactive
+  `auth login`" claim is now accurate. DOC-DRIFT **D1 and D7 → Resolved**.
+- §7: added integration tests `bare_ileap_prints_help_and_exits_0` and
+  `auth_login_no_creds_non_tty_stdin_exits_4`.
+
+**Deviation from §4–§5 (post-implementation cleanup):** the prompt helpers were
+subsequently renamed `tty` → `prompt` (file `src/tty.rs` → `src/prompt.rs`),
+following the "is a dedicated `tty` module necessary?" review (decision: keep the
+module, rename for honesty). Consequently the implemented call sites use
+`crate::prompt::{prompt, prompt_password}` from `src/prompt.rs`, **not** the
+`tty::*` / `src/tty.rs` names written in the Changes section above.
+`prompt_password` was retained as §5 requires.
