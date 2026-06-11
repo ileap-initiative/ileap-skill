@@ -250,6 +250,31 @@ async fn auto_mode_merges_pages() {
     assert_eq!(items[2]["id"], "c");
 }
 
+#[test]
+fn limit_zero_is_rejected_at_parse_time() {
+    // --limit 0 would never terminate pagination; clap must reject it (exit 2)
+    let output = ileap()
+        .args([
+            "--token",
+            "tok",
+            "--base-url",
+            "http://limit-zero-test.invalid",
+            "shipments",
+            "list",
+            "--limit",
+            "0",
+            "--yes",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("1..") || stderr.to_lowercase().contains("invalid value"),
+        "expected a range/invalid-value error, got: {stderr}"
+    );
+}
+
 #[tokio::test]
 async fn max_pages_caps_pagination() {
     let server = MockServer::start().await;

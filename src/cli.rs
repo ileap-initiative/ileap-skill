@@ -112,8 +112,8 @@ pub enum FootprintsCmd {
 
 #[derive(Args, Clone, Debug, Default)]
 pub struct ListArgs {
-    /// Maximum number of results
-    #[arg(long, short = 'l')]
+    /// Maximum number of results (page size; must be at least 1)
+    #[arg(long, short = 'l', value_parser = clap::value_parser!(u32).range(1..))]
     pub limit: Option<u32>,
 
     /// Filter expression (repeatable).

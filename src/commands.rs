@@ -135,39 +135,32 @@ where
 {
     let non_interactive = yes || !std::io::stdin().is_terminal();
 
-    if non_interactive {
-        let mut pages: Vec<Value> = vec![];
-        let mut offset = 0u32;
-        let mut page_num = 0u32;
-        loop {
-            let value = fetch(offset).await.map_err(Into::into)?;
-            let at_boundary = limit.is_some_and(|l| item_count(&value) == l as usize);
-            page_num += 1;
+    let mut pages: Vec<Value> = vec![];
+    let mut offset = 0u32;
+    let mut page_num = 0u32;
+    loop {
+        let value = fetch(offset).await.map_err(Into::into)?;
+        page_num += 1;
+        // Continue paging? Non-interactive: a full page suggests more data.
+        // Interactive: the user answers the next-page prompt.
+        let more = if non_interactive {
+            let full_page = limit.is_some_and(|l| item_count(&value) == l as usize);
             pages.push(value);
-            if !at_boundary || max_pages.is_some_and(|mp| page_num >= mp) {
-                break;
-            }
-            let Some(l) = limit else {
-                break;
-            };
-            offset += l;
+            full_page
+        } else {
+            print_page(&value, limit, output)?
+        };
+        let at_max = max_pages.is_some_and(|mp| page_num >= mp);
+        if !more || at_max {
+            break;
         }
+        let Some(l) = limit else {
+            break;
+        };
+        offset += l;
+    }
+    if non_interactive {
         output::print_value(&merge_pages(pages), output);
-    } else {
-        let mut offset = 0u32;
-        let mut page_num = 0u32;
-        loop {
-            let value = fetch(offset).await.map_err(Into::into)?;
-            page_num += 1;
-            let at_max = max_pages.is_some_and(|mp| page_num >= mp);
-            if !print_page(&value, limit, output)? || at_max {
-                break;
-            }
-            let Some(l) = limit else {
-                break;
-            };
-            offset += l;
-        }
     }
     Ok(())
 }
@@ -176,12 +169,13 @@ fn merge_pages(mut pages: Vec<Value>) -> Value {
     if pages.len() == 1 {
         return pages.remove(0);
     }
+    // The merged envelope follows the first page. A server that mixes shapes
+    // across pages is already misbehaving; we stay lossless but deterministic.
+    let is_object = matches!(pages.first(), Some(Value::Object(_)));
     let mut all_data: Vec<Value> = vec![];
-    let mut is_object = false;
     for page in &pages {
         match page {
             Value::Object(obj) => {
-                is_object = true;
                 if let Some(Value::Array(data)) = obj.get("data") {
                     all_data.extend(data.iter().cloned());
                 }
@@ -225,6 +219,19 @@ mod tests {
         let p2 = json!([{"id": "b"}]);
         let merged = merge_pages(vec![p1, p2]);
         let items = merged.as_array().unwrap();
+        assert_eq!(items.len(), 2);
+    }
+
+    /// Mixed shapes across pages (misbehaving server): the envelope follows
+    /// the first page; items from all pages are kept.
+    #[test]
+    fn merge_pages_mixed_shapes_first_page_wins() {
+        let object_first = merge_pages(vec![json!({"data": [{"id": "a"}]}), json!([{"id": "b"}])]);
+        let items = object_first["data"].as_array().unwrap();
+        assert_eq!(items.len(), 2);
+
+        let array_first = merge_pages(vec![json!([{"id": "a"}]), json!({"data": [{"id": "b"}]})]);
+        let items = array_first.as_array().unwrap();
         assert_eq!(items.len(), 2);
     }
 }
