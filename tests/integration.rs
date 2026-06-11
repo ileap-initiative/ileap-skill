@@ -232,7 +232,6 @@ async fn auto_mode_merges_pages() {
             "list",
             "--limit",
             "2",
-            "--yes",
         ])
         .output()
         .unwrap();
@@ -263,7 +262,6 @@ fn limit_zero_is_rejected_at_parse_time() {
             "list",
             "--limit",
             "0",
-            "--yes",
         ])
         .output()
         .unwrap();
@@ -300,7 +298,6 @@ async fn max_pages_caps_pagination() {
             "list",
             "--limit",
             "2",
-            "--yes",
             "--max-pages",
             "1",
         ])

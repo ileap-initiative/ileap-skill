@@ -1,12 +1,11 @@
 use anyhow::Result;
 use serde_json::Value;
 use std::future::Future;
-use std::io::IsTerminal;
 
 use crate::cli::{Command, FootprintsCmd, ListCmd, OutputFormat};
 use crate::client::Client;
 use crate::output;
-use crate::pager::{item_count, print_page};
+use crate::pager::item_count;
 
 pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Result<()> {
     match cmd {
@@ -19,7 +18,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                     );
                     return Ok(());
                 }
-                run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                run_list(args.max_pages, args.limit, output, |off| {
                     client.footprints(args.limit, off, &args.filter)
                 })
                 .await?;
@@ -43,7 +42,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, output, |off| {
                 client.shipments(args.limit, off, &args.filter)
             })
             .await?;
@@ -59,7 +58,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, output, |off| {
                 client.tocs(args.limit, off, &args.filter)
             })
             .await?;
@@ -75,7 +74,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, output, |off| {
                 client.hocs(args.limit, off, &args.filter)
             })
             .await?;
@@ -91,7 +90,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, output, |off| {
                 client.tad(args.limit, off, &args.filter)
             })
             .await?;
@@ -107,7 +106,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
                 );
                 return Ok(());
             }
-            run_list(args.yes, args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, output, |off| {
                 client.aed(args.limit, off, &args.filter)
             })
             .await?;
@@ -122,7 +121,6 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
 }
 
 pub(crate) async fn run_list<F, Fut, E>(
-    yes: bool,
     max_pages: Option<u32>,
     limit: Option<u32>,
     output: &OutputFormat,
@@ -133,24 +131,18 @@ where
     Fut: Future<Output = std::result::Result<Value, E>>,
     E: Into<anyhow::Error>,
 {
-    let non_interactive = yes || !std::io::stdin().is_terminal();
-
     let mut pages: Vec<Value> = vec![];
     let mut offset = 0u32;
     let mut page_num = 0u32;
     loop {
         let value = fetch(offset).await.map_err(Into::into)?;
         page_num += 1;
-        // Continue paging? Non-interactive: a full page suggests more data.
-        // Interactive: the user answers the next-page prompt.
-        let more = if non_interactive {
-            let full_page = limit.is_some_and(|l| item_count(&value) == l as usize);
-            pages.push(value);
-            full_page
-        } else {
-            print_page(&value, limit, output)?
-        };
+
+        let more = limit.is_some_and(|l| item_count(&value) == l as usize);
         let at_max = max_pages.is_some_and(|mp| page_num >= mp);
+
+        pages.push(value);
+
         if !more || at_max {
             break;
         }
@@ -159,9 +151,9 @@ where
         };
         offset += l;
     }
-    if non_interactive {
-        output::print_value(&merge_pages(pages), output);
-    }
+
+    output::print_value(&merge_pages(pages), output);
+
     Ok(())
 }
 
@@ -255,7 +247,7 @@ mod run_list_tests {
                 Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}]})) // 1 item < limit 5
             }
         };
-        run_list(true, None, Some(5), &OutputFormat::Compact, fetch)
+        run_list(None, Some(5), &OutputFormat::Compact, fetch)
             .await
             .unwrap();
         assert_eq!(counter.load(SeqCst), 1);
@@ -278,7 +270,7 @@ mod run_list_tests {
                 Ok::<_, anyhow::Error>(page)
             }
         };
-        run_list(true, None, Some(2), &OutputFormat::Compact, fetch)
+        run_list(None, Some(2), &OutputFormat::Compact, fetch)
             .await
             .unwrap();
         assert_eq!(counter.load(SeqCst), 3);
@@ -296,7 +288,7 @@ mod run_list_tests {
                 Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}, {"id": "b"}]}))
             }
         };
-        run_list(true, Some(2), Some(2), &OutputFormat::Compact, fetch)
+        run_list(Some(2), Some(2), &OutputFormat::Compact, fetch)
             .await
             .unwrap();
         assert_eq!(counter.load(SeqCst), 2);
@@ -314,7 +306,7 @@ mod run_list_tests {
                 Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}, {"id": "b"}]}))
             }
         };
-        run_list(true, None, None, &OutputFormat::Compact, fetch)
+        run_list(None, None, &OutputFormat::Compact, fetch)
             .await
             .unwrap();
         assert_eq!(counter.load(SeqCst), 1);

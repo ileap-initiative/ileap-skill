@@ -131,10 +131,6 @@ pub struct ListArgs {
     #[arg(long, short = 'n')]
     pub dry_run: bool,
 
-    /// Automatically page through all results without prompting
-    #[arg(long, short = 'y')]
-    pub yes: bool,
-
     /// Maximum number of pages to fetch when paginating
     #[arg(long, short = 'm')]
     pub max_pages: Option<u32>,
