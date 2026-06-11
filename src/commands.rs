@@ -121,7 +121,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
     Ok(())
 }
 
-async fn run_list<F, Fut>(
+pub(crate) async fn run_list<F, Fut, E>(
     yes: bool,
     max_pages: Option<u32>,
     limit: Option<u32>,
@@ -130,7 +130,8 @@ async fn run_list<F, Fut>(
 ) -> Result<()>
 where
     F: Fn(u32) -> Fut,
-    Fut: Future<Output = Result<Value>>,
+    Fut: Future<Output = std::result::Result<Value, E>>,
+    E: Into<anyhow::Error>,
 {
     let non_interactive = yes || !std::io::stdin().is_terminal();
 
@@ -139,7 +140,7 @@ where
         let mut offset = 0u32;
         let mut page_num = 0u32;
         loop {
-            let value = fetch(offset).await?;
+            let value = fetch(offset).await.map_err(Into::into)?;
             let at_boundary = limit.is_some_and(|l| item_count(&value) == l as usize);
             page_num += 1;
             pages.push(value);
@@ -156,7 +157,7 @@ where
         let mut offset = 0u32;
         let mut page_num = 0u32;
         loop {
-            let value = fetch(offset).await?;
+            let value = fetch(offset).await.map_err(Into::into)?;
             page_num += 1;
             let at_max = max_pages.is_some_and(|mp| page_num >= mp);
             if !print_page(&value, limit, output)? || at_max {
@@ -225,5 +226,90 @@ mod tests {
         let merged = merge_pages(vec![p1, p2]);
         let items = merged.as_array().unwrap();
         assert_eq!(items.len(), 2);
+    }
+}
+
+#[cfg(test)]
+mod run_list_tests {
+    use super::*;
+    use serde_json::json;
+    use std::sync::atomic::{AtomicU32, Ordering::SeqCst};
+    use std::sync::Arc;
+
+    /// One page with fewer items than limit → exactly 1 fetch (short last page stops immediately).
+    #[tokio::test]
+    async fn run_list_stops_on_partial_last_page() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let c = counter.clone();
+        let fetch = move |_off: u32| {
+            let c = c.clone();
+            async move {
+                c.fetch_add(1, SeqCst);
+                Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}]})) // 1 item < limit 5
+            }
+        };
+        run_list(true, None, Some(5), &OutputFormat::Compact, fetch)
+            .await
+            .unwrap();
+        assert_eq!(counter.load(SeqCst), 1);
+    }
+
+    /// Three pages: offset 0 → 2 items, offset 2 → 2 items, offset 4 → 1 item → 3 fetches.
+    #[tokio::test]
+    async fn run_list_paginates_until_short_page() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let c = counter.clone();
+        let fetch = move |off: u32| {
+            let c = c.clone();
+            async move {
+                c.fetch_add(1, SeqCst);
+                let page = match off {
+                    0 => json!({"data": [{"id": "a"}, {"id": "b"}]}),
+                    2 => json!({"data": [{"id": "c"}, {"id": "d"}]}),
+                    _ => json!({"data": [{"id": "e"}]}), // 1 item < limit 2 → stop
+                };
+                Ok::<_, anyhow::Error>(page)
+            }
+        };
+        run_list(true, None, Some(2), &OutputFormat::Compact, fetch)
+            .await
+            .unwrap();
+        assert_eq!(counter.load(SeqCst), 3);
+    }
+
+    /// max_pages=Some(2) with always-full pages (2 items, limit=2) → exactly 2 fetches.
+    #[tokio::test]
+    async fn run_list_max_pages_caps_fetches() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let c = counter.clone();
+        let fetch = move |_off: u32| {
+            let c = c.clone();
+            async move {
+                c.fetch_add(1, SeqCst);
+                Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}, {"id": "b"}]}))
+            }
+        };
+        run_list(true, Some(2), Some(2), &OutputFormat::Compact, fetch)
+            .await
+            .unwrap();
+        assert_eq!(counter.load(SeqCst), 2);
+    }
+
+    /// limit=None → boundary check is always false → exactly 1 fetch (guards against infinite loop).
+    #[tokio::test]
+    async fn run_list_no_limit_single_fetch() {
+        let counter = Arc::new(AtomicU32::new(0));
+        let c = counter.clone();
+        let fetch = move |_off: u32| {
+            let c = c.clone();
+            async move {
+                c.fetch_add(1, SeqCst);
+                Ok::<_, anyhow::Error>(json!({"data": [{"id": "a"}, {"id": "b"}]}))
+            }
+        };
+        run_list(true, None, None, &OutputFormat::Compact, fetch)
+            .await
+            .unwrap();
+        assert_eq!(counter.load(SeqCst), 1);
     }
 }

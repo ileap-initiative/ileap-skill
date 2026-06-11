@@ -6,7 +6,8 @@ use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::cli::{AuthCmd, OutputFormat};
-use crate::client::{Client, ExitCode};
+use crate::client::Client;
+use crate::error::CliError;
 use crate::output;
 use crate::prompt::{prompt, prompt_password};
 
@@ -68,7 +69,7 @@ pub fn load_saved_token(base_url: &str) -> Result<Option<String>> {
     Ok(Some(t))
 }
 
-pub fn credential_error(username: Option<&str>, password: Option<&str>) -> anyhow::Error {
+pub fn credential_error(username: Option<&str>, password: Option<&str>) -> CliError {
     let msg = match (username, password) {
         (Some(_), None) => {
             "--username provided but --password is missing — provide --password or set ILEAP_PASSWORD"
@@ -81,7 +82,7 @@ pub fn credential_error(username: Option<&str>, password: Option<&str>) -> anyho
         }
         (Some(_), Some(_)) => unreachable!("credential_error called with both credentials present"),
     };
-    anyhow::Error::from(ExitCode(4)).context(msg)
+    CliError::Auth(msg.to_string())
 }
 
 pub async fn run_auth(
@@ -130,7 +131,7 @@ pub async fn run_auth(
                             output,
                         );
                     } else {
-                        return Err(credential_error(u, p));
+                        return Err(credential_error(u, p).into());
                     }
                 }
             }
@@ -177,12 +178,6 @@ mod tests {
             .unwrap_or(0)
     }
 
-    fn exit_code(err: &anyhow::Error) -> Option<i32> {
-        err.chain()
-            .find_map(|c| c.downcast_ref::<crate::client::ExitCode>())
-            .map(|ec| ec.0)
-    }
-
     // --- jwt_exp ---
 
     #[test]
@@ -208,24 +203,27 @@ mod tests {
     #[test]
     fn credential_error_username_only_exit_code_4() {
         let err = credential_error(Some("user"), None);
-        assert_eq!(exit_code(&err), Some(4));
-        let msg = format!("{err:#}");
+        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert_eq!(err.exit_code(), 4);
+        let msg = err.to_string();
         assert!(msg.contains("--password"), "expected --password hint, got: {msg}");
     }
 
     #[test]
     fn credential_error_password_only_exit_code_4() {
         let err = credential_error(None, Some("pass"));
-        assert_eq!(exit_code(&err), Some(4));
-        let msg = format!("{err:#}");
+        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert_eq!(err.exit_code(), 4);
+        let msg = err.to_string();
         assert!(msg.contains("--username"), "expected --username hint, got: {msg}");
     }
 
     #[test]
     fn credential_error_neither_exit_code_4() {
         let err = credential_error(None, None);
-        assert_eq!(exit_code(&err), Some(4));
-        let msg = format!("{err:#}");
+        assert!(matches!(err, CliError::Auth(_)), "expected Auth variant, got: {err:?}");
+        assert_eq!(err.exit_code(), 4);
+        let msg = err.to_string();
         assert!(msg.contains("not authenticated"), "expected 'not authenticated', got: {msg}");
     }
 
@@ -302,7 +300,10 @@ mod tests {
         let err = run_auth(AuthCmd::Login, base_url, None, None, None, None, &OutputFormat::Compact)
             .await
             .unwrap_err();
-        assert_eq!(exit_code(&err), Some(4));
+        // err is anyhow::Error wrapping a CliError::Auth
+        let ce = err.downcast_ref::<CliError>().expect("expected CliError in chain");
+        assert!(matches!(ce, CliError::Auth(_)), "expected Auth variant, got: {ce:?}");
+        assert_eq!(ce.exit_code(), 4);
     }
 
     #[tokio::test]

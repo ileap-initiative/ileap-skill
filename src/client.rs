@@ -1,8 +1,9 @@
-use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::STANDARD};
 use serde::Deserialize;
 use serde_json::Value;
 use std::time::Duration;
+
+use crate::error::CliError;
 
 #[cfg(not(test))]
 const BACKOFF_BASE_MS: u64 = 1000;
@@ -19,17 +20,6 @@ pub struct Client {
 struct TokenResponse {
     access_token: String,
 }
-
-#[derive(Debug)]
-pub struct ExitCode(pub i32);
-
-impl std::fmt::Display for ExitCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "exit {}", self.0)
-    }
-}
-
-impl std::error::Error for ExitCode {}
 
 impl Client {
     fn build_client(timeout: Option<Duration>) -> reqwest::Client {
@@ -66,7 +56,7 @@ impl Client {
         username: &str,
         password: &str,
         timeout: Option<Duration>,
-    ) -> Result<Self> {
+    ) -> std::result::Result<Self, CliError> {
         let client = Self::build_client(timeout);
         let credentials = STANDARD.encode(format!("{username}:{password}"));
         let token_endpoint = Self::discover_token_endpoint(&client, base_url).await;
@@ -79,9 +69,13 @@ impl Client {
             .await
             .map_err(|e| {
                 if e.is_timeout() {
-                    anyhow::anyhow!("request to {token_endpoint} timed out — increase --timeout if needed")
+                    CliError::Other(format!(
+                        "request to {token_endpoint} timed out — increase --timeout if needed"
+                    ))
                 } else {
-                    anyhow::anyhow!("failed to reach token endpoint at {token_endpoint} — verify --base-url is correct and the server is reachable")
+                    CliError::Other(format!(
+                        "failed to reach token endpoint at {token_endpoint} — verify --base-url is correct and the server is reachable"
+                    ))
                 }
             })?;
 
@@ -93,14 +87,22 @@ impl Client {
                 403 => " — credentials valid but access denied, check account permissions",
                 _ => "",
             };
-            let exit_code = match status.as_u16() { 401 | 403 => 4, _ => 1 };
-            return Err(anyhow::Error::from(ExitCode(exit_code))
-                .context(format!("authentication failed ({status}){hint}: {body}")));
+            let msg = format!("authentication failed ({status}){hint}: {body}");
+            return Err(match status.as_u16() {
+                401 | 403 => CliError::Auth(msg),
+                _ => CliError::Other(msg),
+            });
         }
 
-        let body = resp.text().await.context("failed to read auth response body")?;
-        let token_resp: TokenResponse = serde_json::from_str(&body)
-            .with_context(|| format!("failed to parse auth response — unexpected format: {body}"))?;
+        let body = resp
+            .text()
+            .await
+            .map_err(|e| CliError::Other(format!("failed to read auth response body: {e}")))?;
+        let token_resp: TokenResponse = serde_json::from_str(&body).map_err(|e| {
+            CliError::Other(format!(
+                "failed to parse auth response — unexpected format: {body}: {e}"
+            ))
+        })?;
 
         Ok(Self {
             http: client,
@@ -121,7 +123,7 @@ impl Client {
         &self.token
     }
 
-    async fn get(&self, path: &str, params: Vec<(String, String)>) -> Result<Value> {
+    async fn get(&self, path: &str, params: Vec<(String, String)>) -> std::result::Result<Value, CliError> {
         let url = format!("{}{}", self.base_url, path);
         const MAX_RETRIES: u32 = 2;
         let mut attempt = 0u32;
@@ -136,9 +138,13 @@ impl Client {
                 .await
                 .map_err(|e| {
                     if e.is_timeout() {
-                        anyhow::anyhow!("request to {url} timed out — increase --timeout if needed")
+                        CliError::Other(format!(
+                            "request to {url} timed out — increase --timeout if needed"
+                        ))
                     } else {
-                        anyhow::anyhow!("failed to connect to {url} — verify --base-url is correct and the server is reachable")
+                        CliError::Other(format!(
+                            "failed to connect to {url} — verify --base-url is correct and the server is reachable"
+                        ))
                     }
                 })?;
 
@@ -178,14 +184,23 @@ impl Client {
                     500..=599 => " — server error, the API may be temporarily unavailable",
                     _ => "",
                 };
-                let exit_code = match status.as_u16() { 404 => 3, 401 | 403 => 4, _ => 1 };
-                return Err(anyhow::Error::from(ExitCode(exit_code))
-                    .context(format!("GET {url} failed ({status}){hint}: {body}")));
+                let msg = format!("GET {url} failed ({status}){hint}: {body}");
+                return Err(match status.as_u16() {
+                    404 => CliError::NotFound(msg),
+                    401 | 403 => CliError::Auth(msg),
+                    _ => CliError::Other(msg),
+                });
             }
 
-            let body = resp.text().await.context("failed to read response body")?;
-            return serde_json::from_str(&body)
-                .with_context(|| format!("failed to parse response — unexpected format: {body}"));
+            let body = resp
+                .text()
+                .await
+                .map_err(|e| CliError::Other(format!("failed to read response body: {e}")))?;
+            return serde_json::from_str(&body).map_err(|e| {
+                CliError::Other(format!(
+                    "failed to parse response — unexpected format: {body}: {e}"
+                ))
+            });
         }
     }
 
@@ -206,7 +221,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         let mut params = Self::base_params(limit, offset);
         for f in filters {
             if let Some((k, v)) = f.split_once('=') {
@@ -263,7 +278,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filter: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         let mut params = Self::base_params(limit, offset);
         // PACT uses OData $filter; only a single expression is supported
         if let Some(f) = filter.first() {
@@ -272,7 +287,7 @@ impl Client {
         self.get("/2/footprints", params).await
     }
 
-    pub async fn footprint(&self, id: &str) -> Result<Value> {
+    pub async fn footprint(&self, id: &str) -> std::result::Result<Value, CliError> {
         self.get(&format!("/2/footprints/{id}"), vec![]).await
     }
 
@@ -281,7 +296,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         self.get_kv_filters("/v1/ileap/shipments", limit, offset, filters).await
     }
 
@@ -290,7 +305,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         self.get_kv_filters("/v1/ileap/tocs", limit, offset, filters).await
     }
 
@@ -299,7 +314,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         self.get_kv_filters("/v1/ileap/hocs", limit, offset, filters).await
     }
 
@@ -308,7 +323,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         self.get_kv_filters("/v1/ileap/tad", limit, offset, filters).await
     }
 
@@ -317,7 +332,7 @@ impl Client {
         limit: Option<u32>,
         offset: u32,
         filters: &[String],
-    ) -> Result<Value> {
+    ) -> std::result::Result<Value, CliError> {
         self.get_kv_filters("/v1/ileap/aed", limit, offset, filters).await
     }
 }
@@ -330,12 +345,6 @@ mod tests {
 
     async fn client(server: &MockServer) -> Client {
         Client::from_token(&server.uri(), "test-token".to_string(), None)
-    }
-
-    fn exit_code(err: &anyhow::Error) -> Option<i32> {
-        err.chain()
-            .find_map(|c| c.downcast_ref::<ExitCode>())
-            .map(|ec| ec.0)
     }
 
     #[tokio::test]
@@ -391,7 +400,7 @@ mod tests {
             .await;
 
         let err = client(&server).await.footprint("nope").await.unwrap_err();
-        assert_eq!(exit_code(&err), Some(3));
+        assert!(matches!(err, CliError::NotFound(_)), "expected NotFound, got: {err:?}");
 
         let received = server.received_requests().await.unwrap();
         assert_eq!(received.len(), 1, "404 must not be retried");
@@ -408,7 +417,7 @@ mod tests {
             .await;
 
         let err = client(&server).await.footprints(None, 0, &[]).await.unwrap_err();
-        assert_eq!(exit_code(&err), Some(4));
+        assert!(matches!(err, CliError::Auth(_)), "expected Auth, got: {err:?}");
     }
 
     #[tokio::test]

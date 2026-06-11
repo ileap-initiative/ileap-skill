@@ -2,6 +2,7 @@ mod auth;
 mod cli;
 mod client;
 mod commands;
+mod error;
 mod output;
 mod pager;
 mod prompt;
@@ -9,7 +10,7 @@ mod prompt;
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
 use cli::{Cli, Command, OutputFormat};
-use client::ExitCode;
+use error::CliError;
 use std::time::Duration;
 
 #[tokio::main(flavor = "current_thread")]
@@ -19,24 +20,16 @@ async fn main() {
     let output = cli.output.clone();
 
     if let Err(e) = run(cli).await {
-        let exit_code = e
-            .chain()
-            .find_map(|c| c.downcast_ref::<ExitCode>())
-            .map(|ec| ec.0)
-            .unwrap_or(1);
+        // Attempt to recover the typed error before it is fully erased.
+        let (exit_code, error_type, message) =
+            if let Some(ce) = e.downcast_ref::<CliError>() {
+                (ce.exit_code(), ce.error_type(), ce.to_string())
+            } else {
+                // Fallback for errors that never passed through CliError
+                // (e.g. I/O errors from tty or pager).
+                (1, "error", e.to_string())
+            };
 
-        let message: Vec<String> = e
-            .chain()
-            .filter(|c| c.downcast_ref::<ExitCode>().is_none())
-            .map(|c| c.to_string())
-            .collect();
-        let message = message.join(": ");
-
-        let error_type = match exit_code {
-            3 => "not_found",
-            4 => "auth_error",
-            _ => "error",
-        };
         let json = serde_json::json!({
             "cli_error": { "type": error_type, "message": message }
         });
@@ -82,7 +75,7 @@ async fn run(cli: Cli) -> Result<()> {
                     (Some(u), Some(p)) => {
                         client::Client::authenticate(&cli.base_url, &u, &p, timeout).await?
                     }
-                    (u, p) => return Err(auth::credential_error(u.as_deref(), p.as_deref())),
+                    (u, p) => return Err(auth::credential_error(u.as_deref(), p.as_deref()).into()),
                 }
             };
             commands::run_cmd(&client, cmd, &output).await?;
