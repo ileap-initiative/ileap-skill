@@ -2,7 +2,16 @@
 
 ## Status
 
-Proposed
+Rejected (2026-06-11). The decision below was not adopted; the five explicit
+iLEAP dispatch arms in `src/commands.rs` remain as-is (Considered Options "C —
+status quo").
+
+**Rationale:** the `macro_rules!` approach hurts transparency, understandability,
+and readability. A reader has to mentally expand the macro to see what each arm
+actually does, whereas the five explicit arms are immediately self-contained and
+greppable. For a small, stable set of resources the modest line savings do not
+justify trading away that directness — explicit repetition is the clearer choice
+here.
 
 ## Context
 

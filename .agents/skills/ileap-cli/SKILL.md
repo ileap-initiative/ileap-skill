@@ -1,15 +1,17 @@
 ---
 name: ileap-cli
 description: >-
-  Use the iLEAP CLI to query iLEAP API resources and render an HTML dashboard.
-  REQUIRED for all iLEAP work — use this skill before reading source code, fetching data,
-  or generating any iLEAP output. Prevents common mistakes: wrong terminology (TOC = Transport
-  Operation Category, HOC = Hub Operation Category — not "Characteristics"), incorrect field
-  names, and redundant reimplementation. USE FOR: fetching shipments, footprints, tocs, hocs,
-  tad, aed; filtering and paginating; checking auth; building, creating, or showing a dashboard;
-  exploring transport emissions data. TRIGGER PHRASES: "show ileap", "fetch ileap",
-  "list shipments", "list footprints", "query iLEAP", "ileap summary", "build a dashboard",
-  "create a dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
+  Use the iLEAP CLI to query, filter, and explore iLEAP API resources (shipments, footprints,
+  tocs, hocs, tad, aed). REQUIRED for all iLEAP work — use this skill before reading source
+  code, fetching data, or generating any iLEAP output. Prevents common mistakes: wrong
+  terminology (TOC = Transport Operation Category, HOC = Hub Operation Category — not
+  "Characteristics"), incorrect field names, and redundant reimplementation. USE FOR: fetching
+  shipments, footprints, tocs, hocs, tad, aed; filtering and paginating; checking auth;
+  exploring transport emissions data; optionally rendering an HTML dashboard. TRIGGER PHRASES:
+  "show ileap", "fetch ileap", "list shipments", "list footprints", "query iLEAP", "ileap
+  summary", "show tocs", "show hocs", "show tad", "show aed", "build a dashboard", "create a
+  dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
+allowed-tools: Bash, Read, Write, ileap, cargo
 ---
 
 # iLEAP CLI Skill
@@ -20,9 +22,9 @@ description: >-
 
 It contains the authoritative terminology definitions and field schemas for all iLEAP resources. Without it you will make mistakes — for example, TOC stands for Transport Operation **Category** (not Characteristics), and field names differ from what general knowledge would suggest.
 
-## Step 0.5 — Execution Policy
-Always wrap every command in `bash -c "..."`, even simple ones.
-Never run bare commands. Run without asking for confirmation and proceed autonomously.
+If the file does not exist at that path, stop and inform the user: "SCHEMAS.md is missing from `.agents/skills/ileap-cli/`. Cannot proceed safely without authoritative field definitions. Please restore this file from the repository." Do not attempt to infer field names from general knowledge.
+
+If the file exists but cannot be read or is empty, stop and inform the user: "SCHEMAS.md at `.agents/skills/ileap-cli/` is unreadable or empty. Cannot proceed safely. Please restore this file from the repository."
 
 ## DO NOT
 
@@ -30,7 +32,7 @@ Never run bare commands. Run without asking for confirmation and proceed autonom
 - **DO NOT** implement your own data-fetching logic — use the CLI commands documented here.
 - **DO NOT** assume what any iLEAP term means — check the Terminology table in SCHEMAS.md first.
 - **DO NOT** write a new CLI command when the user asks for a dashboard — run the Dashboard Procedure below.
-- **DO NOT** use emojis anywhere in the dashboard HTML — no emoji in labels, badges, headings, buttons, descriptions, or inline text. Use plain text or Unicode symbols (e.g. `&#x2193;`, `&#x2605;`) only where a visual marker is strictly needed.
+- **DO NOT** violate the dashboard emoji policy. See Styling constraints: No emojis.
 
 ## Prerequisites
 
@@ -46,6 +48,14 @@ If missing, install it from the local repo:
 cargo install --path .
 ```
 
+After installation, verify the binary is reachable:
+
+```bash
+which ileap || export PATH="$HOME/.cargo/bin:$PATH"
+```
+
+If `ileap` is still not found after updating PATH, report the full PATH to the user and stop.
+
 Requires Rust. If `cargo` is not available, install it first:
 
 ```bash
@@ -54,14 +64,22 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
 **Always use the `ileap` binary** — never fall back to `cargo run --`. Installing first ensures all subsequent commands match the `Bash(ileap *)` permission rule and run without prompts.
 
+If `cargo install --path .` exits with a non-zero code, report the error message to the user and stop — do not attempt to fetch data or generate a dashboard without a working CLI binary.
+
+If the error output contains "could not find Cargo.toml", additionally inform the user: "Run this command from the repository root where Cargo.toml is located."
+
 ## Overview
 
 `ileap` is a CLI tool for the iLEAP API. It supports listing all iLEAP resource types,
 filtering, pagination, and structured JSON output suited for agent consumption.
 
+Default behavior: use standard query/fetch flows for data requests. Use the Dashboard Procedure only when the user explicitly asks for a dashboard or visual HTML output.
+
 ## Authentication
 
-Always verify auth before fetching data:
+> Note: This section is for non-dashboard flows. For dashboard flows, use the self-contained auth decision block in the Dashboard Procedure (step 1) instead of this section.
+
+For non-dashboard flows, verify auth before fetching data:
 
 ```bash
 ileap auth status
@@ -195,6 +213,8 @@ Exit codes: `0` = success, `1` = general error, `3` = not found, `4` = auth erro
 
 ## Dashboard Procedure
 
+Use this section only for dashboard requests. For normal data retrieval, summaries, filtering, and exploration tasks, use the non-dashboard command flows above.
+
 Dashboards can show **all resources** or be **scoped to specific ones** based on the user's request.
 Only fetch and display the resources the user asked about.
 
@@ -205,21 +225,28 @@ Examples:
 
 ### 1. Check auth
 
-```bash
-ileap -o compact auth status
-```
+Auth Check (for dashboard flows only):
 
-If `authenticated` is `false`, do not prompt the user interactively. Instead, try the demo server credentials first:
-
-```bash
-ileap --base-url https://ileap-preview.fly.dev --username hello --password pathfinder auth login
-```
-
-Only ask the user for credentials if the demo server login also fails.
+- (a) Run `ileap -o compact auth status`.
+- (b) If the command exits with a non-zero code and the error is not auth-related (for example, binary missing), stop and report the error to the user.
+- (c) If the command exits with a non-zero code, or `authenticated` is `false`, attempt demo server login:
+   ```bash
+   ileap --base-url https://ileap-preview.fly.dev --username hello --password pathfinder auth login
+   ```
+- (d) If demo login fails (exit code `4`), ask the user for credentials and stop. Do not attempt to fetch data until authenticated.
+- (e) If `authenticated` is `true` or demo login succeeds, continue to fetch.
 
 ### 2. Fetch the relevant resources in parallel
 
-Run all required resource commands in a single message as parallel tool calls — do not fetch sequentially. Add `--base-url` if not using the default:
+Run all required resource commands in a single message as parallel tool calls — do not fetch sequentially.
+
+Issue each resource command as a separate parallel Bash tool call, each with its own stderr redirect: `ileap -o compact shipments list --yes --limit 50 --max-pages 1 2>/tmp/ileap-shipments-err.json`. Store the exit code from each call independently.
+
+Use a single explicit target base URL for all fetch commands in this step: if demo login was used, set it to `https://ileap-preview.fly.dev`; if the user supplied a custom base URL, use that URL.
+
+If all resource fetches return non-zero exit codes, do not generate a dashboard. Instead, report the errors to the user and ask them to verify connectivity and re-run.
+
+If some but not all fetches fail, generate the dashboard showing available data and displaying the per-resource error state for failed resources. Only abort dashboard generation when every requested resource fetch has failed.
 
 ```bash
 ileap --base-url <url> -o compact shipments list --yes --limit 50 --max-pages 1
@@ -230,8 +257,8 @@ ileap --base-url <url> -o compact tocs       list --yes --limit 50 --max-pages 1
 **Capture stderr separately** to detect errors without swallowing output:
 
 ```bash
-ileap -o compact shipments list --yes 2>/tmp/ileap-shipments-err.json
-# then check exit code; if non-zero, read /tmp/ileap-shipments-err.json
+SHIPMENTS=$(ileap -o compact shipments list --yes --limit 50 --max-pages 1 2>/tmp/ileap-shipments-err.json); SHIPMENTS_EXIT=$?
+# stdout is captured in $SHIPMENTS; stderr is captured in /tmp/ileap-shipments-err.json
 ```
 
 On non-zero exit, read `cli_error.type` from stderr:
@@ -254,22 +281,61 @@ echo "$TOCS" | jq '[.data[].tocId]'
 
 ### 3. Generate and open the dashboard
 
-Choose a timestamped path, write the HTML using the **Write tool** (never a Bash heredoc — heredocs break on HTML content inside `bash -c`), then open the file:
+**Step 3a — Resolve timestamp:** Before writing, determine the current UTC timestamp:
+
+```bash
+TS=$(date -u +%Y%m%d-%H%M%S)
+```
+
+If `date -u` returns a non-zero exit code, use the literal fallback filename `/tmp/ileap-dashboard-unknown-ts.html` and note the timestamp could not be resolved.
+
+Use this value in the filename (e.g. `/tmp/ileap-dashboard-20240315-142300.html`). Do not write a file named literally `ileap-dashboard-YYYYMMDD-HHMMSS.html`.
+
+**Step 3b — Write and open:** Before writing HTML, resolve the logo path explicitly:
+
+```bash
+ls "$(git rev-parse --show-toplevel)/ileap-logo.png" 2>/dev/null && echo "LOGO_PATH=$(git rev-parse --show-toplevel)/ileap-logo.png" || echo 'LOGO_PATH='
+```
+
+Then write the HTML using the **Write tool**, then open the file:
 
 ```
-Write tool → /tmp/ileap-dashboard-YYYYMMDD-HHMMSS.html
-Bash: open /tmp/ileap-dashboard-YYYYMMDD-HHMMSS.html
+Write tool → /tmp/ileap-dashboard-$TS.html
 ```
+
+If the Write tool returns an error, report the error to the user and provide the full HTML content as a code block in the chat instead of attempting to open a file.
+
+To open the file after writing, detect the OS first and use the appropriate command:
+
+```bash
+os=$(uname -s)
+if [ "$os" = "Darwin" ]; then open /tmp/ileap-dashboard-$TS.html
+elif [ "$os" = "Linux" ]; then xdg-open /tmp/ileap-dashboard-$TS.html
+else start /tmp/ileap-dashboard-$TS.html
+fi
+```
+
+If the open command fails, print the absolute file path to the user so they can open it manually.
 
 `Write(/tmp/*)` is in the project allow list so this requires no permission prompt.
 
-**Content to include:**
-- Header: iLEAP logo (use an absolute `file://` path to `ileap-logo.png` in the repo root if it exists, so the image resolves from `/tmp`), base URL, and generation timestamp
-- Auth status badge
-- One summary card per resource type showing the total record count returned, or an error message if the fetch failed
-- One expanded row/card per record showing **all mandatory fields** (see table below), plus any other fields present in the data
-- Collapsible raw JSON block per record
-- **Cross-references:** wherever a record contains a `tocId` or `hocId` (e.g. inside a shipment's TCEs), resolve it against the fetched TOC/HOC data and display the linked record's key fields inline (mode, emission intensity). This makes the relationship between shipments and their transport operations visible without requiring the user to look up IDs manually.
+**Before calling the Write tool, confirm each of the following 7 items is present in the HTML you are about to write:**
+
+1. **Header** — iLEAP logo and metadata: If `ileap-logo.png` exists at the repo root, include it as `<img src="file:///absolute/path/to/ileap-logo.png">` so the image resolves from `/tmp`; if the file does not exist, omit the `<img>` element entirely and render the text "iLEAP" as a plain `<h1>` instead. Include the base URL and generation timestamp alongside the logo/heading.
+2. **Auth status badge** — shows whether the session is authenticated.
+3. **Summary cards** — one card per resource type showing the total record count, or an error message if the fetch failed.
+4. **Expanded record cards** — one card per record showing all mandatory fields (see table below); if a mandatory field is absent from a record, show it explicitly as `—`. Plus any additional top-level scalar or object fields present in the record, rendered as a key-value table; nested arrays (e.g. TCEs inside a shipment) should each be rendered as a sub-table.
+5. **Collapsible raw JSON** — a collapsible block per record showing the full raw JSON.
+6. **Cross-references** — see Cross-Reference Resolution Rules below.
+7. **Styling** — light background (white or light grey), inline CSS only, no external dependencies. See Styling constraints: No emojis.
+
+### Cross-Reference Resolution Rules
+
+| Condition | What to display |
+|---|---|
+| TOC/HOC data was not fetched for this dashboard scope, or the TOC/HOC fetch failed | Show raw `tocId`/`hocId` with note `(TOC/HOC data not loaded)` |
+| TOC/HOC data was fetched, but the data array is empty | Show raw `tocId`/`hocId` with note `(record not found in fetched data)` |
+| TOC/HOC data was fetched, but the specific `tocId`/`hocId` is not found in fetched records | Show raw `tocId`/`hocId` with note `(record not found in fetched data)` |
 
 **Mandatory fields — always show these in the structured view:**
 
@@ -288,4 +354,4 @@ Keep styling clean and modern with inline CSS (no external dependencies).
 
 **Styling constraints:**
 - Always use a light background (white or light grey). Do not use dark mode — the iLEAP logo brand guidelines require a light background context.
-- **No emojis.** Do not use emoji characters anywhere in the generated HTML — not in headings, labels, badges, buttons, table cells, or descriptive text. This applies even when emoji might seem helpful as icons (e.g. &#128664; for trucks, &#9889; for electric). Use plain text or HTML named/numeric character references for any non-emoji Unicode symbols you need.
+- **No emojis.** Do not use emoji characters anywhere in the generated HTML — not in headings, labels, badges, buttons, table cells, or descriptive text. This means no raw emoji, no `&#128xxx;` or `&#x1Fxxx;` numeric character references, and no emoji-adjacent codepoints (U+1F000 and above). Use plain text only.
