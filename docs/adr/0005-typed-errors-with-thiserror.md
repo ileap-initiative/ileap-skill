@@ -2,7 +2,8 @@
 
 ## Status
 
-Proposed
+Accepted — **implemented** in the working tree on `martin/adrs` (uncommitted as
+of 2026-06-11). See **Implementation** at the end of this document.
 
 _Supersedes the "Dropped / Won't-ADR" entry for "Replacing `anyhow` with
 `thiserror` for typed errors" in `docs/adr/README.md`. That entry was dropped
@@ -350,9 +351,13 @@ declarations.
 
 - Add `use crate::error::CliError;` and change the return type of
   `credential_error` from `anyhow::Error` to `CliError`. Its callers
-  (`main.rs:111`, `auth.rs:120`) return `Err(auth::credential_error(…))`;
-  the `?` operator will propagate `CliError` into `anyhow::Error` via the
-  blanket `From` impl without any further change at those call sites.
+  (`main.rs:111`, `auth.rs:120`) use `return Err(auth::credential_error(…))`.
+  **Correction (verified at implementation):** these are `return Err(...)` sites,
+  **not** `?`, so they require `.into()` —
+  `return Err(auth::credential_error(…).into())` — to convert `CliError` into the
+  function's `anyhow::Error`. (`anyhow::Error: From<CliError>` holds because
+  `CliError: std::error::Error + Send + Sync + 'static`.) Bare
+  `Err(credential_error(…))` does **not** compile in an `anyhow::Result` fn.
 - Replace `auth.rs:82`:
   ```rust
   // Before
@@ -438,3 +443,40 @@ Confirm that `.code(4)` in `tests/integration.rs:28`, `:50`, `:67`, `:82`
 all pass unchanged. If the `downcast_ref::<CliError>()` in the new `main`
 handler returns `None` for any path that previously set an `ExitCode`, add
 a targeted test to catch the regression before merging.
+
+## Implementation
+
+Implemented on branch `martin/adrs` (working tree, **uncommitted** as of
+2026-06-11). Verified: `cargo build` pass; `cargo test` pass (**32 unit + 10
+integration, 0 failed**) — including the integration tests that lock exit codes
+0/3/4 and `cli_error.type`, and the `client.rs` wiremock tests for 404→exit 3 /
+401→exit 4 / retry. `cargo clippy`: only the pre-existing `client.rs`
+`absurd_extreme_comparisons` lint (`BACKOFF_BASE_MS`); no new findings.
+
+**Files:** `Cargo.toml` (+`thiserror = "2"`); new `src/error.rs` (`CliError`);
+`src/client.rs` (all 7 resource methods + `get` + `get_kv_filters` +
+`authenticate` → `Result<_, CliError>`; `ExitCode` struct and its test-helper
+deleted); `src/auth.rs` (`credential_error` → `CliError`; test helpers → variant
+matching); `src/main.rs` (typed recovery via `downcast_ref::<CliError>()`).
+Built on the ADR-0004 `run_list` bound, so `commands.rs` needed **no** change.
+
+**Deviations from the Changes text (recorded for accuracy):**
+- **§4 `?`-propagation claim was wrong** (now corrected inline above): the
+  `credential_error` call sites use `return Err(...)`, not `?`, so they need
+  `.into()`. Applied in `main.rs` and in `auth.rs`'s ADR-0002 non-TTY branch.
+- **§3 under-counted the `map_err` sites.** It named 2; the real count is ~6 —
+  *every* infrastructure `?` (reqwest send, body read, `serde_json` parse, etc.)
+  inside the now-`CliError` functions had to be `.map_err(|e|
+  CliError::Other(...))`, because `CliError` has no `From<reqwest::Error>` etc.
+  Context strings preserved.
+- **§3 omitted `get_kv_filters` and the 7 resource methods** — all needed the
+  return-type change (they delegate to `get`).
+- **`main` recovery uses a direct `downcast_ref::<CliError>()`** (not
+  `chain().find_map`), valid because no `.context()` is layered over any
+  `CliError`; confirmed by the passing exit-code tests.
+
+**Minor behaviour note:** the fallback (non-`CliError`) message path now uses
+`e.to_string()` (top error only) rather than the old chain joined with `": "`.
+`CliError` messages are self-contained, so user-facing errors are unchanged;
+only stray I/O errors lose chain detail. Use `format!("{e:#}")` in the fallback
+if full-chain detail is wanted.
