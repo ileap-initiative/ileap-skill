@@ -1,6 +1,6 @@
 # iLEAP CLI
 
-This repository contains a simple CLI tool to consume iLEAP data. The CLI tool has both a REPL flow and non-interactive commands, covering both human and machine usage.
+This repository contains a simple CLI tool to consume iLEAP data. Running `ileap` with no subcommand prints help and exits. To authenticate interactively, run `ileap auth login` on a TTY.
 
 ## For agents
 

@@ -1,12 +1,14 @@
 use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde_json::Value;
+use std::io::IsTerminal;
 use std::path::PathBuf;
 use std::time::Duration;
 
 use crate::cli::{AuthCmd, OutputFormat};
 use crate::client::{Client, ExitCode};
 use crate::output;
+use crate::prompt::{prompt, prompt_password};
 
 fn token_file(base_url: &str) -> PathBuf {
     let name = base_url
@@ -117,7 +119,20 @@ pub async fn run_auth(
                         output,
                     );
                 }
-                (u, p) => return Err(credential_error(u, p)),
+                (u, p) => {
+                    if std::io::stdin().is_terminal() {
+                        let u = prompt("Username: ")?;
+                        let p = prompt_password("Password: ")?;
+                        let c = Client::authenticate(base_url, &u, &p, timeout).await?;
+                        save_token(base_url, c.token())?;
+                        output::print_value(
+                            &serde_json::json!({"authenticated": true, "token_source": "credentials"}),
+                            output,
+                        );
+                    } else {
+                        return Err(credential_error(u, p));
+                    }
+                }
             }
         }
         AuthCmd::Status => match load_saved_token(base_url)? {

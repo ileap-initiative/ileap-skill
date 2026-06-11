@@ -23,8 +23,8 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 | # | Doc | Claim vs. reality | Severity | Status |
 |---|-----|-------------------|----------|--------|
-| D1 | `SKILL.md` | "authenticate interactively: `ileap auth login`" — but `auth login` never prompts; with no token/cache/creds it returns `credential_error` (exit 4) | HIGH | Deferred→ADR-0002 |
-| D7 | `README.md` / `SKILL.md` | Bare-`ileap` behaviour (TTY→REPL, non-TTY→exit-1 error) is undocumented/misleading; the "interactive" path points at the wrong command | MED | Deferred→ADR-0002 |
+| D1 | `SKILL.md` | "authenticate interactively: `ileap auth login`" — but `auth login` never prompts; with no token/cache/creds it returns `credential_error` (exit 4) | HIGH | Resolved (ADR-0002, working tree) |
+| D7 | `README.md` / `SKILL.md` | Bare-`ileap` behaviour (TTY→REPL, non-TTY→exit-1 error) is undocumented/misleading; the "interactive" path points at the wrong command | MED | Resolved (ADR-0002, working tree) |
 | D2 | `SKILL.md` env list | `ILEAP_TIMEOUT` env var (`cli.rs:27-28`) is real but undocumented | MED | Open |
 | D3 | `SKILL.md` | Short flags `-t`/`-u`/`-p` for `--token`/`--username`/`--password` (`cli.rs:11,15,19`) undocumented | LOW | Open |
 | D4 | `SKILL.md` | Short flag `-m` for `--max-pages` (`cli.rs:135`) undocumented | LOW | Open |
@@ -47,6 +47,10 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
   `auth login` when stdin is a TTY, which makes this doc claim *correct*. Fix the
   doc as part of that implementation. **Do not fix the doc in isolation** — it
   would describe behaviour that doesn't exist yet.
+- **✓ Resolved (working tree):** A2 implemented in `auth.rs` (`run_auth`,
+  `AuthCmd::Login`): on a TTY it now prompts for username/password; non-TTY still
+  returns `credential_error` (exit 4). The SKILL.md claim is now accurate — **no
+  doc edit was required.** Pending commit/merge.
 
 ### D7 — Bare-`ileap` behaviour undocumented/misleading (MED, Deferred→ADR-0002)
 - **Doc:** `README.md` — "The CLI tool has both a REPL flow and non-interactive
@@ -55,6 +59,9 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
   credential prompt + REPL.
 - **Resolution:** ADR-0002 removes the REPL and makes bare `ileap` print help.
   Update README/SKILL.md when that lands. Same change set as D1.
+- **✓ Resolved (working tree):** `main.rs` `None` arm now prints clap help and
+  exits 0; `repl.rs` deleted. README updated to describe the no-subcommand and
+  `auth login` behaviour. SKILL.md needed no change. Pending commit/merge.
 
 ### D2 — `ILEAP_TIMEOUT` undocumented (MED, Open)
 - **Doc:** `SKILL.md` env list names only `ILEAP_TOKEN`, `ILEAP_USERNAME`,
