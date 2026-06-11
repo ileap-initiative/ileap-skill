@@ -107,7 +107,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 ## Checked — no drift (recorded so they aren't re-investigated)
 
-- **Default base URL** `https://ileap-preview.fly.dev` — matches `cli.rs:7`.
+- **Default base URL** `https://api.preview.ileap.dev` — matches `cli.rs:7`.
 - **Exit codes** 0/1/3/4 — match `main.rs` and `client.rs`.
 - **Resource endpoints** (footprints/shipments/tocs/hocs/tad/aed paths) — match
   `client.rs`.

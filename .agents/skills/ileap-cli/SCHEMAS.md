@@ -1,6 +1,6 @@
 # iLEAP Data Schemas
 
-**Source of truth:** The OpenAPI spec at `https://ileap-preview.fly.dev/openapi.json` documents all resources, fields, enums, and nesting.
+**Source of truth:** The OpenAPI spec at `https://api.preview.ileap.dev/openapi.json` documents all resources, fields, enums, and nesting.
 
 ## Terminology
 
@@ -175,7 +175,7 @@ For any field not in the tables above, extract the schema directly from the Open
 
 1. **Download the OpenAPI spec:**
    ```bash
-   curl -s https://ileap-preview.fly.dev/openapi.json > openapi.json
+   curl -s https://api.preview.ileap.dev/openapi.json > openapi.json
    ```
 
 2. **Find the schema for a resource (e.g., ShipmentFootprint):**
@@ -241,13 +241,13 @@ If implementing automated schema discovery, fetch and parse directly:
 
 ```bash
 # Get all enum values from any schema
-curl -s https://ileap-preview.fly.dev/openapi.json | jq '.components.schemas.<SchemaName>.enum'
+curl -s https://api.preview.ileap.dev/openapi.json | jq '.components.schemas.<SchemaName>.enum'
 
 # Find all properties of a schema
-curl -s https://ileap-preview.fly.dev/openapi.json | jq '.components.schemas.<SchemaName>.properties | keys'
+curl -s https://api.preview.ileap.dev/openapi.json | jq '.components.schemas.<SchemaName>.properties | keys'
 
 # Chain through $ref pointers to resolve nested types
-curl -s https://ileap-preview.fly.dev/openapi.json | jq '.components.schemas.ShipmentFootprint.properties.origin | ."$ref"'
+curl -s https://api.preview.ileap.dev/openapi.json | jq '.components.schemas.ShipmentFootprint.properties.origin | ."$ref"'
 # Output: "#/components/schemas/Location"
 # Then fetch: curl ... | jq '.components.schemas.Location.properties'
 ```
