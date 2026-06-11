@@ -1,0 +1,61 @@
+name: Release binaries
+
+# Builds static musl binaries for Linux (the targets the agent skill bundles
+# and that match sandboxed agent environments such as Claude.ai), plus macOS,
+# and attaches them to a GitHub release when a tag is pushed.
+#
+# Note: reqwest currently uses native-tls, so the musl builds statically link
+# OpenSSL (hence the alpine container + openssl-libs-static). Switching
+# reqwest to rustls-tls would simplify this.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-linux:
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            artifact: ileap-Linux-x86_64
+          - os: ubuntu-24.04-arm
+            artifact: ileap-Linux-aarch64
+    runs-on: ${{ matrix.os }}
+    container: rust:alpine
+    env:
+      OPENSSL_STATIC: "1"
+    steps:
+      - run: apk add -q musl-dev git pkgconfig openssl-dev openssl-libs-static tar
+      - uses: actions/checkout@v4
+      - run: cargo build --release --locked
+      - run: cp target/release/ileap ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.artifact }}
+
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo build --release --locked
+      - run: cp target/release/ileap ileap-Darwin-arm64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ileap-Darwin-arm64
+          path: ileap-Darwin-arm64
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [build-linux, build-macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: ileap-*

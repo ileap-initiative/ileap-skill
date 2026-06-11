@@ -1,1 +1,3 @@
 /target
+/dist
+/.agents/skills/ileap-cli/bin/
