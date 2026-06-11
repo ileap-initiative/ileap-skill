@@ -23,14 +23,14 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 | # | Doc | Claim vs. reality | Severity | Status |
 |---|-----|-------------------|----------|--------|
-| D1 | `SKILL.md` | "authenticate interactively: `ileap auth login`" — but `auth login` never prompts; with no token/cache/creds it returns `credential_error` (exit 4) | HIGH | Resolved (ADR-0002, working tree) |
-| D7 | `README.md` / `SKILL.md` | Bare-`ileap` behaviour (TTY→REPL, non-TTY→exit-1 error) is undocumented/misleading; the "interactive" path points at the wrong command | MED | Resolved (ADR-0002, working tree) |
+| D1 | `SKILL.md` | "authenticate interactively: `ileap auth login`" — but `auth login` never prompts; with no token/cache/creds it returns `credential_error` (exit 4) | HIGH | Resolved (ADR-0002, merged PR #7) |
+| D7 | `README.md` / `SKILL.md` | Bare-`ileap` behaviour (TTY→REPL, non-TTY→exit-1 error) is undocumented/misleading; the "interactive" path points at the wrong command | MED | Resolved (ADR-0002, merged PR #7) |
 | D2 | `SKILL.md` env list | `ILEAP_TIMEOUT` env var (`cli.rs:27-28`) is real but undocumented | MED | Open |
 | D3 | `SKILL.md` | Short flags `-t`/`-u`/`-p` for `--token`/`--username`/`--password` (`cli.rs:11,15,19`) undocumented | LOW | Open |
 | D4 | `SKILL.md` | Short flag `-m` for `--max-pages` (`cli.rs:135`) undocumented | LOW | Open |
-| D5 | `SKILL.md` | Short flag `-n` for `--dry-run` (`cli.rs:128,105`) undocumented | LOW | Open |
-| D6 | `SKILL.md` | Short flag `-l` for `--limit` (`cli.rs:113`) undocumented | LOW | Open |
-| D8 | `SKILL.md` | `auth login` idempotent silent-success on a cached token (`auth.rs:104-110`) is not surfaced; compounds D1 confusion | LOW | Open |
+| D5 | `SKILL.md` | Short flag `-n` for `--dry-run` (`cli.rs:104,127`) undocumented | LOW | Open |
+| D6 | `SKILL.md` | Short flag `-l` for `--limit` (`cli.rs:112`) undocumented | LOW | Open |
+| D8 | `SKILL.md` | `auth login` idempotent silent-success on a cached token (`auth.rs:107-110`) is not surfaced; compounds D1 confusion | LOW | Open |
 | D9 | skill layout | `.claude/skills/ileap-cli/SKILL.md` is a symlink to `.agents/...`; tools that don't follow symlinks miss it (informational) | LOW | Open |
 | D10 | `SKILL.md` | PACT `footprints` honours only the **first** `-f` filter; extra `-f` flags are silently dropped at runtime (only `--dry-run` reveals it). The repeatable-`-f` docs don't note this limitation | MED | Open |
 
@@ -38,7 +38,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 ## Detail
 
-### D1 — `auth login` does not prompt interactively (HIGH, Deferred→ADR-0002)
+### D1 — `auth login` does not prompt interactively (HIGH, Resolved — ADR-0002, PR #7)
 - **Doc:** `SKILL.md` — "To authenticate interactively: `ileap auth login`".
 - **Code:** `auth.rs:111-121` — `AuthCmd::Login` with no `--token`, no cached
   token, and no `--username/--password` returns `credential_error` → exit 4. No
@@ -47,21 +47,24 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
   `auth login` when stdin is a TTY, which makes this doc claim *correct*. Fix the
   doc as part of that implementation. **Do not fix the doc in isolation** — it
   would describe behaviour that doesn't exist yet.
-- **✓ Resolved (working tree):** A2 implemented in `auth.rs` (`run_auth`,
-  `AuthCmd::Login`): on a TTY it now prompts for username/password; non-TTY still
-  returns `credential_error` (exit 4). The SKILL.md claim is now accurate — **no
-  doc edit was required.** Pending commit/merge.
+- **✓ Resolved (committed, merged PR #7):** A2 implemented in `auth.rs`
+  (`run_auth`, `AuthCmd::Login`, `auth.rs:124-126`): on a TTY it now prompts for
+  username/password; non-TTY still returns `credential_error` (exit 4). The
+  SKILL.md claim is now accurate — **no doc edit was required.** Note: the prompt
+  helpers moved from `tty.rs` to a renamed `prompt.rs` module during
+  implementation (`auth.rs:12` → `use crate::prompt::...`).
 
-### D7 — Bare-`ileap` behaviour undocumented/misleading (MED, Deferred→ADR-0002)
+### D7 — Bare-`ileap` behaviour undocumented/misleading (MED, Resolved — ADR-0002, PR #7)
 - **Doc:** `README.md` — "The CLI tool has both a REPL flow and non-interactive
   commands" is the only mention; `SKILL.md` is silent on no-subcommand behaviour.
 - **Code:** `main.rs:59-86` — non-TTY → exit-1 error; TTY → interactive
   credential prompt + REPL.
 - **Resolution:** ADR-0002 removes the REPL and makes bare `ileap` print help.
   Update README/SKILL.md when that lands. Same change set as D1.
-- **✓ Resolved (working tree):** `main.rs` `None` arm now prints clap help and
-  exits 0; `repl.rs` deleted. README updated to describe the no-subcommand and
-  `auth login` behaviour. SKILL.md needed no change. Pending commit/merge.
+- **✓ Resolved (committed, merged PR #7):** `main.rs` `None` arm now prints clap
+  help and exits 0 (`main.rs:51`, via `clap::CommandFactory`); `repl.rs` deleted.
+  README updated to describe the no-subcommand and `auth login` behaviour.
+  SKILL.md needed no change.
 
 ### D2 — `ILEAP_TIMEOUT` undocumented (MED, Open)
 - **Doc:** `SKILL.md` env list names only `ILEAP_TOKEN`, `ILEAP_USERNAME`,
@@ -72,7 +75,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 ### D3–D6 — Undocumented short flags (LOW, Open)
 - **Code:** `-t/-u/-p` (`cli.rs:11,15,19`), `-m` (`cli.rs:135`), `-n`
-  (`cli.rs:128,105`), `-l` (`cli.rs:113`).
+  (`cli.rs:104,127`), `-l` (`cli.rs:112`).
 - **Fix:** optional — short flags are discoverable via `--help`. Document only if
   the team wants `SKILL.md` to be the complete reference. Pure doc fix.
 
@@ -80,7 +83,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 - **Doc:** `SKILL.md` doesn't mention that `auth login` returns
   `{"authenticated": true, "token_source": "cache"}` without acting when a valid
   token is cached.
-- **Code:** `auth.rs:104-110`. The behaviour is documented in the `cli.rs:83`
+- **Code:** `auth.rs:107-110`. The behaviour is documented in the `cli.rs:83`
   doc-comment but not in user-facing docs.
 - **Fix:** note the idempotent behaviour in `SKILL.md`, ideally alongside the D1
   fix so the full `auth login` decision tree (token → cache → creds → prompt) is
@@ -94,10 +97,10 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 ### D10 — `footprints` single-filter limitation not user-documented (MED, Open)
 - **Doc:** `SKILL.md` Filtering section documents `-f` as repeatable but does not
   note that for PACT `footprints` only the first `-f` is sent.
-- **Code:** `client.rs:269-271` (live) and `client.rs:235-237` (dry-run) use
-  `filter.first()` only — intentional and code-commented (`client.rs:268`).
+- **Code:** `client.rs:284-285` (live) and `client.rs:250-251` (dry-run) use
+  `filter.first()` only — intentional and code-commented (`client.rs:283`).
   iLEAP-standalone endpoints honour all filters (`get_kv_filters`,
-  `client.rs:211-215`). *(Verified during review.)*
+  `client.rs:218,227`). *(Re-verified against merged code 2026-06-11.)*
 - **Cross-ref:** this is the *user-doc gap*; the *code-side* decision (accept /
   join with ` and ` / error on multiple) is backlog candidate **C3** in
   `adr/README.md`. Fix the doc to match whatever C3 decides — if C3 chooses
@@ -107,8 +110,10 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 
 ## Checked — no drift (recorded so they aren't re-investigated)
 
-- **Default base URL** `https://api.preview.ileap.dev` — matches `cli.rs:7`.
-- **Exit codes** 0/1/3/4 — match `main.rs` and `client.rs`.
+- **Default base URL** `https://api.preview.ileap.dev` — matches `cli.rs:10`.
+- **Exit codes** 0/1/3/4 — match `error.rs` (`CliError::exit_code`, lines 22-26)
+  and `main.rs` (downcast mapping, lines 24-26). Note: the mapping moved from
+  `client.rs`'s old `ExitCode` to `error.rs` in ADR-0005; still 0/1/3/4.
 - **Resource endpoints** (footprints/shipments/tocs/hocs/tad/aed paths) — match
   `client.rs`.
 - **`--yes`/`-y`, `-o compact`** — match `cli.rs`.

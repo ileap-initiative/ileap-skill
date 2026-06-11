@@ -7,7 +7,7 @@ pub struct Cli {
     #[arg(
         long,
         env = "ILEAP_BASE_URL",
-        default_value = "https://ileap-preview.fly.dev"
+        default_value = "https://api.preview.ileap.dev"
     )]
     pub base_url: String,
 

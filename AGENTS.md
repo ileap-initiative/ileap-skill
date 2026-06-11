@@ -8,3 +8,17 @@ This repo ships an iLEAP CLI skill at `.agents/skills/ileap-cli/`.
 
 - `.agents/skills/ileap-cli/SKILL.md` — auth, commands, dashboard procedure, output format, exit codes
 - `.agents/skills/ileap-cli/SCHEMAS.md` — field reference, filter syntax, and schema discovery workflow for all resource types
+
+These two are intentionally **not** imported into memory: they are large and the
+`ileap-cli` skill already surfaces them on demand when an iLEAP task is triggered.
+Importing them would bloat every session for no benefit.
+
+## Architecture review & ADRs
+
+The operating memory for architecture review, ADRs (`docs/adr/`), and the
+documentation drift ledger (`docs/DOC-DRIFT.md`) is imported below so it loads
+automatically. It covers epistemic labeling, git-as-oracle for implementation
+status, the single-writer rule for shared ledgers, re-verifying citations after
+merges, delegation strategy, and ADR/ledger conventions.
+
+@docs/adr/PROCESS.md
