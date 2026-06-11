@@ -4,12 +4,11 @@ mod client;
 mod commands;
 mod error;
 mod output;
-mod pager;
 mod prompt;
 
 use anyhow::Result;
 use clap::{CommandFactory, Parser};
-use cli::{Cli, Command, OutputFormat};
+use cli::{Cli, OutputFormat};
 use error::CliError;
 use std::time::Duration;
 
@@ -51,8 +50,8 @@ async fn run(cli: Cli) -> Result<()> {
             println!();
         }
 
-        Some(Command::Auth { cmd }) => {
-            auth::run_auth(
+        Some(cmd) => {
+            commands::run_cmd(
                 cmd,
                 &cli.base_url,
                 cli.token.as_deref(),
@@ -62,22 +61,6 @@ async fn run(cli: Cli) -> Result<()> {
                 &output,
             )
             .await?;
-        }
-
-        Some(cmd) => {
-            let client = if let Some(t) = cli.token {
-                client::Client::from_token(&cli.base_url, t, timeout)
-            } else if let Some(t) = auth::load_saved_token(&cli.base_url)? {
-                client::Client::from_token(&cli.base_url, t, timeout)
-            } else {
-                match (cli.username, cli.password) {
-                    (Some(u), Some(p)) => {
-                        client::Client::authenticate(&cli.base_url, &u, &p, timeout).await?
-                    }
-                    (u, p) => return Err(auth::credential_error(u.as_deref(), p.as_deref()).into()),
-                }
-            };
-            commands::run_cmd(&client, cmd, &output).await?;
         }
     }
 

@@ -69,6 +69,27 @@ pub fn load_saved_token(base_url: &str) -> Result<Option<String>> {
     Ok(Some(t))
 }
 
+/// Resolve a `Client` from the credential chain (ADR-0009):
+/// `--token` flag/env → cached token → `--username`/`--password` → error.
+pub async fn resolve_client(
+    base_url: &str,
+    token: Option<&str>,
+    username: Option<&str>,
+    password: Option<&str>,
+    timeout: Option<Duration>,
+) -> Result<Client> {
+    if let Some(t) = token {
+        return Ok(Client::from_token(base_url, t.to_string(), timeout));
+    }
+    if let Some(t) = load_saved_token(base_url)? {
+        return Ok(Client::from_token(base_url, t, timeout));
+    }
+    match (username, password) {
+        (Some(u), Some(p)) => Ok(Client::authenticate(base_url, u, p, timeout).await?),
+        (u, p) => Err(credential_error(u, p).into()),
+    }
+}
+
 pub fn credential_error(username: Option<&str>, password: Option<&str>) -> CliError {
     let msg = match (username, password) {
         (Some(_), None) => {
@@ -122,8 +143,16 @@ pub async fn run_auth(
                 }
                 (u, p) => {
                     if std::io::stdin().is_terminal() {
-                        let u = prompt("Username: ")?;
-                        let p = prompt_password("Password: ")?;
+                        // Prompt only for what is missing (ADR-0009); a
+                        // provided --username / --password is used as-is.
+                        let u = match u {
+                            Some(u) => u.to_string(),
+                            None => prompt("Username: ")?,
+                        };
+                        let p = match p {
+                            Some(p) => p.to_string(),
+                            None => prompt_password("Password: ")?,
+                        };
                         let c = Client::authenticate(base_url, &u, &p, timeout).await?;
                         save_token(base_url, c.token())?;
                         output::print_value(
@@ -286,6 +315,47 @@ mod tests {
         let base_url = "http://test-no-file-present.invalid";
         let _ = std::fs::remove_file(token_file(base_url));
         assert!(load_saved_token(base_url).unwrap().is_none());
+    }
+
+    // --- resolve_client ---
+
+    #[tokio::test]
+    async fn resolve_client_prefers_token_flag() {
+        let c = resolve_client(
+            "http://test-resolve-flag.invalid",
+            Some("flag-tok"),
+            None,
+            None,
+            None,
+        )
+        .await
+        .unwrap();
+        assert_eq!(c.token(), "flag-tok");
+    }
+
+    #[tokio::test]
+    async fn resolve_client_falls_back_to_cached_token() {
+        let base_url = "http://test-resolve-cache.invalid";
+        let token = make_jwt(json!({"exp": 9999999999u64}));
+        save_token(base_url, &token).unwrap();
+        let c = resolve_client(base_url, None, None, None, None)
+            .await
+            .unwrap();
+        assert_eq!(c.token(), token);
+    }
+
+    #[tokio::test]
+    async fn resolve_client_no_credentials_is_auth_error() {
+        let base_url = "http://test-resolve-none.invalid";
+        let _ = std::fs::remove_file(token_file(base_url));
+        let err = match resolve_client(base_url, None, None, None, None).await {
+            Ok(_) => panic!("expected an error without credentials"),
+            Err(e) => e,
+        };
+        let ce = err
+            .downcast_ref::<CliError>()
+            .expect("expected CliError in chain");
+        assert!(matches!(ce, CliError::Auth(_)), "got: {ce:?}");
     }
 
     // --- run_auth ---

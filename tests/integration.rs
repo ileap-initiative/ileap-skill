@@ -54,6 +54,31 @@ fn auth_login_no_creds_non_tty_stdin_exits_4() {
         .code(4);
 }
 
+#[test]
+fn auth_login_username_only_non_tty_names_missing_password() {
+    // partial credentials + non-TTY stdin: the error must name the missing
+    // --password, not re-ask for the username the user already provided
+    let output = ileap()
+        .args([
+            "--base-url",
+            "http://auth-partial-login-test.invalid",
+            "--username",
+            "user",
+            "auth",
+            "login",
+        ])
+        .env_remove("ILEAP_TOKEN")
+        .env_remove("ILEAP_PASSWORD")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("--password"),
+        "expected the missing --password to be named, got: {stderr}"
+    );
+}
+
 // ---------------------------------------------------------------------------
 // version
 // ---------------------------------------------------------------------------

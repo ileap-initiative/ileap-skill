@@ -2,40 +2,61 @@ use anyhow::Result;
 use serde_json::Value;
 use std::future::Future;
 use std::io::IsTerminal;
+use std::time::Duration;
 
+use crate::auth;
 use crate::cli::{Command, FootprintsCmd, ListCmd, OutputFormat};
-use crate::client::Client;
 use crate::output;
-use crate::pager::{item_count, print_page};
+use crate::prompt::prompt;
 
-pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Result<()> {
+#[allow(clippy::too_many_arguments)]
+pub async fn run_cmd(
+    cmd: Command,
+    base_url: &str,
+    token: Option<&str>,
+    username: Option<&str>,
+    password: Option<&str>,
+    timeout: Option<Duration>,
+    output: &OutputFormat,
+) -> Result<()> {
+    // Only the API commands need a client; `auth` manages credentials itself.
+    let resolve = || auth::resolve_client(base_url, token, username, password, timeout);
+
     match cmd {
-        Command::Footprints { cmd } => match cmd {
-            FootprintsCmd::List(args) => {
-                if args.dry_run {
-                    output::print_value(
-                        &client.footprints_dry_run(args.limit, 0, &args.filter),
-                        output,
-                    );
-                    return Ok(());
+        Command::Auth { cmd } => {
+            auth::run_auth(cmd, base_url, token, username, password, timeout, output).await?;
+        }
+
+        Command::Footprints { cmd } => {
+            let client = resolve().await?;
+            match cmd {
+                FootprintsCmd::List(args) => {
+                    if args.dry_run {
+                        output::print_value(
+                            &client.footprints_dry_run(args.limit, 0, &args.filter),
+                            output,
+                        );
+                        return Ok(());
+                    }
+                    run_list(args.yes, args.max_pages, args.limit, output, |off| {
+                        client.footprints(args.limit, off, &args.filter)
+                    })
+                    .await?;
                 }
-                run_list(args.yes, args.max_pages, args.limit, output, |off| {
-                    client.footprints(args.limit, off, &args.filter)
-                })
-                .await?;
-            }
-            FootprintsCmd::Get { id, dry_run } => {
-                if dry_run {
-                    output::print_value(&client.footprint_dry_run(&id), output);
-                    return Ok(());
+                FootprintsCmd::Get { id, dry_run } => {
+                    if dry_run {
+                        output::print_value(&client.footprint_dry_run(&id), output);
+                        return Ok(());
+                    }
+                    output::print_value(&client.footprint(&id).await?, output);
                 }
-                output::print_value(&client.footprint(&id).await?, output);
             }
-        },
+        }
 
         Command::Shipments {
             cmd: ListCmd::List(args),
         } => {
+            let client = resolve().await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/shipments", args.limit, 0, &args.filter),
@@ -52,6 +73,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
         Command::Tocs {
             cmd: ListCmd::List(args),
         } => {
+            let client = resolve().await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tocs", args.limit, 0, &args.filter),
@@ -68,6 +90,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
         Command::Hocs {
             cmd: ListCmd::List(args),
         } => {
+            let client = resolve().await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/hocs", args.limit, 0, &args.filter),
@@ -84,6 +107,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
         Command::Tad {
             cmd: ListCmd::List(args),
         } => {
+            let client = resolve().await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tad", args.limit, 0, &args.filter),
@@ -100,6 +124,7 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
         Command::Aed {
             cmd: ListCmd::List(args),
         } => {
+            let client = resolve().await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/aed", args.limit, 0, &args.filter),
@@ -112,13 +137,21 @@ pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Re
             })
             .await?;
         }
-
-        Command::Auth { .. } => {
-            unreachable!("auth command is handled before run_cmd")
-        }
     }
 
     Ok(())
+}
+
+fn item_count(value: &Value) -> usize {
+    match value {
+        Value::Object(obj) => obj
+            .get("data")
+            .and_then(|d| d.as_array())
+            .map(|a| a.len())
+            .unwrap_or(0),
+        Value::Array(arr) => arr.len(),
+        _ => 0,
+    }
 }
 
 pub(crate) async fn run_list<F, Fut, E>(
@@ -141,14 +174,21 @@ where
     loop {
         let value = fetch(offset).await.map_err(Into::into)?;
         page_num += 1;
+        // A page with fewer items than the limit is the last one.
+        let full_page = limit.is_some_and(|l| item_count(&value) == l as usize);
         // Continue paging? Non-interactive: a full page suggests more data.
-        // Interactive: the user answers the next-page prompt.
+        // Interactive: print the page now and ask the user.
         let more = if non_interactive {
-            let full_page = limit.is_some_and(|l| item_count(&value) == l as usize);
             pages.push(value);
             full_page
         } else {
-            print_page(&value, limit, output)?
+            output::print_value(&value, output);
+            if full_page {
+                let answer = prompt("Next page? [y/N] ")?;
+                matches!(answer.to_lowercase().as_str(), "y" | "yes")
+            } else {
+                false
+            }
         };
         let at_max = max_pages.is_some_and(|mp| page_num >= mp);
         if !more || at_max {
@@ -195,6 +235,26 @@ fn merge_pages(mut pages: Vec<Value>) -> Value {
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn item_count_object_format() {
+        assert_eq!(item_count(&json!({"data": [1, 2, 3]})), 3);
+    }
+
+    #[test]
+    fn item_count_array_format() {
+        assert_eq!(item_count(&json!([1, 2])), 2);
+    }
+
+    #[test]
+    fn item_count_empty_object() {
+        assert_eq!(item_count(&json!({"data": []})), 0);
+    }
+
+    #[test]
+    fn item_count_non_data_value() {
+        assert_eq!(item_count(&json!("irrelevant")), 0);
+    }
 
     #[test]
     fn merge_pages_single_passthrough() {
