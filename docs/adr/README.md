@@ -26,6 +26,7 @@ and never re-states a fix; this index owns the decisions.
 | [0007](0007-pagination-loop-correctness.md) | Pagination loop — correctness and shape | **Proposed** | Reject `--limit 0` at clap; unify the two `run_list` loops; `merge_pages` envelope from first page (absorbs C5) |
 | [0008](0008-pact-filter-semantics.md) | PACT `$filter` — error on multiple `-f` | **Proposed** | Error when >1 `-f` for `footprints`; signature `&[String]` → `Option<&str>`; help-text fix (resolves C3) |
 | [0009](0009-straighten-dispatch-and-interactive-flow.md) | Straighten command dispatch and interactive flow | **Proposed** | Credential chain `main.rs` → `auth::resolve_client`; `run_cmd` dispatches Auth too (no `unreachable!`); `auth login` prompts only for missing credentials; next-page prompt moves out of `pager.rs` |
+| [0010](0010-token-cache-username-scoping.md) | Scope the token cache by username, not just base URL | **Proposed** (implemented) | Cache file keyed by base URL **and** username (`token_<url>__<user>`); username from `--username`/env, JWT `sub` fallback for `--token`; non-auth cache read only when username known |
 
 **Implementation order** (0001+0002 accepted as baseline): **0004 → 0005**
 (0003 is **Rejected**). 0004 generalizes `run_list`'s error bound; 0005's typed

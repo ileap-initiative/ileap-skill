@@ -764,6 +764,7 @@ dependencies = [
  "base64",
  "clap",
  "dirs",
+ "percent-encoding",
  "predicates",
  "reqwest",
  "rpassword",

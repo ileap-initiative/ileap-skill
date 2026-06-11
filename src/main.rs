@@ -65,9 +65,16 @@ async fn run(cli: Cli) -> Result<()> {
         }
 
         Some(cmd) => {
+            // The token cache is keyed by username (ADR-0010); only consult it
+            // when a username is known, so one user's token is never silently
+            // reused for another.
+            let cached = match cli.username.as_deref() {
+                Some(u) => auth::load_saved_token(&cli.base_url, u)?,
+                None => None,
+            };
             let client = if let Some(t) = cli.token {
                 client::Client::from_token(&cli.base_url, t, timeout)
-            } else if let Some(t) = auth::load_saved_token(&cli.base_url)? {
+            } else if let Some(t) = cached {
                 client::Client::from_token(&cli.base_url, t, timeout)
             } else {
                 match (cli.username, cli.password) {

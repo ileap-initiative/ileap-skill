@@ -1,5 +1,6 @@
 use anyhow::{Context, Result};
 use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde_json::Value;
 use std::io::IsTerminal;
 use std::path::PathBuf;
@@ -11,17 +12,25 @@ use crate::error::CliError;
 use crate::output;
 use crate::prompt::{prompt, prompt_password};
 
-fn token_file(base_url: &str) -> Result<PathBuf> {
-    // The scheme stays in the name so http:// and https:// tokens for the
-    // same host never share a cache file (ADR-0006).
-    let name = base_url.replace(['/', ':', '.', '-'], "_");
+fn token_file(base_url: &str, username: &str) -> Result<PathBuf> {
+    // Percent-encode each section (ADR-0010). NON_ALPHANUMERIC encodes every
+    // byte except [A-Za-z0-9], which makes the mapping injective (no
+    // collisions — unlike the earlier lossy `replace([...], "_")`),
+    // filesystem-safe (`/` -> %2F keeps it a single path component, no `..`
+    // traversal), and keeps the scheme so http/https never collide (ADR-0006).
+    // The `__` separator is unambiguous because `_` itself encodes to %5F, so
+    // an encoded section can never contain a raw underscore.
+    let url = utf8_percent_encode(base_url, NON_ALPHANUMERIC);
+    let user = utf8_percent_encode(username, NON_ALPHANUMERIC);
     let config_dir = dirs::config_dir()
         .context("cannot determine config directory; set HOME or XDG_CONFIG_HOME")?;
-    Ok(config_dir.join("ileap").join(format!("token_{name}")))
+    Ok(config_dir
+        .join("ileap")
+        .join(format!("token_{url}__{user}")))
 }
 
-pub fn save_token(base_url: &str, token: &str) -> Result<()> {
-    let path = token_file(base_url)?;
+pub fn save_token(base_url: &str, username: &str, token: &str) -> Result<()> {
+    let path = token_file(base_url, username)?;
     if let Some(dir) = path.parent() {
         std::fs::create_dir_all(dir)
             .with_context(|| format!("failed to create config directory at {}", dir.display()))?;
@@ -45,8 +54,15 @@ pub fn jwt_exp(token: &str) -> Option<u64> {
     json.get("exp").and_then(|v| v.as_u64())
 }
 
-pub fn load_saved_token(base_url: &str) -> Result<Option<String>> {
-    let path = token_file(base_url)?;
+pub fn jwt_sub(token: &str) -> Option<String> {
+    let payload = token.split('.').nth(1)?;
+    let bytes = URL_SAFE_NO_PAD.decode(payload).ok()?;
+    let json: Value = serde_json::from_slice(&bytes).ok()?;
+    json.get("sub").and_then(|v| v.as_str()).map(str::to_string)
+}
+
+pub fn load_saved_token(base_url: &str, username: &str) -> Result<Option<String>> {
+    let path = token_file(base_url, username)?;
     let t = match std::fs::read_to_string(&path) {
         Ok(s) => s,
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(None),
@@ -103,14 +119,27 @@ pub async fn run_auth(
     match cmd {
         AuthCmd::Login => {
             if let Some(t) = token {
-                save_token(base_url, t)?;
+                // The cache file is keyed by username (ADR-0010); for a token
+                // passed via flag, fall back to the token's own `sub` claim
+                // when no --username/ILEAP_USERNAME is supplied.
+                let cache_user = match username {
+                    Some(u) => u.to_string(),
+                    None => jwt_sub(t).ok_or_else(|| {
+                        CliError::Auth(
+                            "provide --username (or set ILEAP_USERNAME) to associate the cached token".to_string(),
+                        )
+                    })?,
+                };
+                save_token(base_url, &cache_user, t)?;
                 output::print_value(
                     &serde_json::json!({"authenticated": true, "token_source": "flag"}),
                     output,
                 );
                 return Ok(());
             }
-            if load_saved_token(base_url)?.is_some() {
+            if let Some(u) = username
+                && load_saved_token(base_url, u)?.is_some()
+            {
                 output::print_value(
                     &serde_json::json!({"authenticated": true, "token_source": "cache"}),
                     output,
@@ -120,7 +149,7 @@ pub async fn run_auth(
             match (username, password) {
                 (Some(u), Some(p)) => {
                     let c = Client::authenticate(base_url, u, p, timeout).await?;
-                    save_token(base_url, c.token())?;
+                    save_token(base_url, u, c.token())?;
                     output::print_value(
                         &serde_json::json!({"authenticated": true, "token_source": "credentials"}),
                         output,
@@ -129,9 +158,18 @@ pub async fn run_auth(
                 (u, p) => {
                     if std::io::stdin().is_terminal() {
                         let u = prompt("Username: ")?;
+                        // The username is only known now; probe the cache for it
+                        // before asking for a password (ADR-0010).
+                        if load_saved_token(base_url, &u)?.is_some() {
+                            output::print_value(
+                                &serde_json::json!({"authenticated": true, "token_source": "cache"}),
+                                output,
+                            );
+                            return Ok(());
+                        }
                         let p = prompt_password("Password: ")?;
                         let c = Client::authenticate(base_url, &u, &p, timeout).await?;
-                        save_token(base_url, c.token())?;
+                        save_token(base_url, &u, c.token())?;
                         output::print_value(
                             &serde_json::json!({"authenticated": true, "token_source": "credentials"}),
                             output,
@@ -142,8 +180,8 @@ pub async fn run_auth(
                 }
             }
         }
-        AuthCmd::Status => match load_saved_token(base_url)? {
-            Some(t) => {
+        AuthCmd::Status => match username.and_then(|u| load_saved_token(base_url, u).transpose()) {
+            Some(Ok(t)) => {
                 let expires_in = jwt_exp(&t).map(|exp| {
                     let now = std::time::SystemTime::now()
                         .duration_since(std::time::UNIX_EPOCH)
@@ -156,6 +194,7 @@ pub async fn run_auth(
                     output,
                 );
             }
+            Some(Err(e)) => return Err(e),
             None => {
                 output::print_value(&serde_json::json!({"authenticated": false}), output);
             }
@@ -188,9 +227,28 @@ mod tests {
 
     #[test]
     fn token_file_distinguishes_schemes() {
-        let http = token_file("http://api.example.com").unwrap();
-        let https = token_file("https://api.example.com").unwrap();
+        let http = token_file("http://api.example.com", "alice").unwrap();
+        let https = token_file("https://api.example.com", "alice").unwrap();
         assert_ne!(http, https);
+    }
+
+    #[test]
+    fn token_file_distinguishes_usernames() {
+        let alice = token_file("https://api.example.com", "alice").unwrap();
+        let bob = token_file("https://api.example.com", "bob").unwrap();
+        assert_ne!(alice, bob);
+    }
+
+    #[test]
+    fn token_file_no_collision_on_separator_chars() {
+        // Under the old lossy `replace([...], "_")` scheme, both "a/b" and
+        // "a_b" mapped to "a_b" and collided. Percent-encoding keeps them
+        // distinct ("a%2Fb" vs "a%5Fb"), proving the key is injective.
+        let url = "https://api.example.com";
+        assert_ne!(
+            token_file(url, "a/b").unwrap(),
+            token_file(url, "a_b").unwrap()
+        );
     }
 
     #[cfg(unix)]
@@ -199,9 +257,9 @@ mod tests {
         use std::os::unix::fs::PermissionsExt;
         let base_url = "http://test-token-perms.invalid";
         // Remove any leftover file so we exercise the creation path
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
-        save_token(base_url, "tok").unwrap();
-        let mode = std::fs::metadata(token_file(base_url).unwrap())
+        let _ = std::fs::remove_file(token_file(base_url, "tester").unwrap());
+        save_token(base_url, "tester", "tok").unwrap();
+        let mode = std::fs::metadata(token_file(base_url, "tester").unwrap())
             .unwrap()
             .permissions()
             .mode();
@@ -226,6 +284,22 @@ mod tests {
     fn jwt_exp_malformed_token_returns_none() {
         assert_eq!(jwt_exp("not.a.jwt"), None);
         assert_eq!(jwt_exp("onlyone"), None);
+    }
+
+    // --- jwt_sub ---
+
+    #[test]
+    fn jwt_sub_returns_sub_claim() {
+        let token = make_jwt(json!({"sub": "carol", "exp": 9999999999u64}));
+        assert_eq!(jwt_sub(&token), Some("carol".to_string()));
+    }
+
+    #[test]
+    fn jwt_sub_no_sub_or_malformed_returns_none() {
+        let no_sub = make_jwt(json!({"exp": 9999999999u64}));
+        assert_eq!(jwt_sub(&no_sub), None);
+        assert_eq!(jwt_sub("not.a.jwt"), None);
+        assert_eq!(jwt_sub("onlyone"), None);
     }
 
     // --- credential_error ---
@@ -281,8 +355,8 @@ mod tests {
     fn load_saved_token_expired_returns_none() {
         let base_url = "http://test-expired.invalid";
         let token = make_jwt(json!({"exp": 1u64, "sub": "test"}));
-        save_token(base_url, &token).unwrap();
-        assert!(load_saved_token(base_url).unwrap().is_none());
+        save_token(base_url, "tester", &token).unwrap();
+        assert!(load_saved_token(base_url, "tester").unwrap().is_none());
     }
 
     #[test]
@@ -290,16 +364,30 @@ mod tests {
         // exp = now + 30 is within the 60-second pre-expiry window
         let base_url = "http://test-expiring-soon.invalid";
         let token = make_jwt(json!({"exp": now_secs() + 30u64}));
-        save_token(base_url, &token).unwrap();
-        assert!(load_saved_token(base_url).unwrap().is_none());
+        save_token(base_url, "tester", &token).unwrap();
+        assert!(load_saved_token(base_url, "tester").unwrap().is_none());
     }
 
     #[test]
     fn load_saved_token_valid_returns_token() {
         let base_url = "http://test-valid-token.invalid";
         let token = make_jwt(json!({"exp": now_secs() + 3600u64}));
-        save_token(base_url, &token).unwrap();
-        assert_eq!(load_saved_token(base_url).unwrap(), Some(token));
+        save_token(base_url, "tester", &token).unwrap();
+        assert_eq!(load_saved_token(base_url, "tester").unwrap(), Some(token));
+    }
+
+    #[test]
+    fn load_saved_token_is_scoped_by_username() {
+        // A token saved for one user must not be visible to another (ADR-0010).
+        let base_url = "http://test-user-scoping.invalid";
+        let token = make_jwt(json!({"exp": now_secs() + 3600u64}));
+        let _ = std::fs::remove_file(token_file(base_url, "bob").unwrap());
+        save_token(base_url, "alice", &token).unwrap();
+        assert!(load_saved_token(base_url, "bob").unwrap().is_none());
+        assert_eq!(
+            load_saved_token(base_url, "alice").unwrap(),
+            Some(token)
+        );
     }
 
     #[test]
@@ -307,15 +395,15 @@ mod tests {
         // Tokens without an exp claim should be returned as-is
         let base_url = "http://test-no-exp.invalid";
         let token = make_jwt(json!({"sub": "test"}));
-        save_token(base_url, &token).unwrap();
-        assert!(load_saved_token(base_url).unwrap().is_some());
+        save_token(base_url, "tester", &token).unwrap();
+        assert!(load_saved_token(base_url, "tester").unwrap().is_some());
     }
 
     #[test]
     fn load_saved_token_missing_file_returns_none() {
         let base_url = "http://test-no-file-present.invalid";
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
-        assert!(load_saved_token(base_url).unwrap().is_none());
+        let _ = std::fs::remove_file(token_file(base_url, "tester").unwrap());
+        assert!(load_saved_token(base_url, "tester").unwrap().is_none());
     }
 
     // --- run_auth ---
@@ -328,6 +416,25 @@ mod tests {
             AuthCmd::Login,
             base_url,
             Some(&token),
+            Some("flaguser"),
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
+        assert_eq!(load_saved_token(base_url, "flaguser").unwrap(), Some(token));
+    }
+
+    #[tokio::test]
+    async fn run_auth_login_token_flag_keys_by_jwt_sub_without_username() {
+        // With no --username, the cache key falls back to the JWT `sub` claim.
+        let base_url = "http://test-run-auth-flag-sub.invalid";
+        let token = make_jwt(json!({"exp": 9999999999u64, "sub": "subuser"}));
+        run_auth(
+            AuthCmd::Login,
+            base_url,
+            Some(&token),
             None,
             None,
             None,
@@ -335,20 +442,40 @@ mod tests {
         )
         .await
         .unwrap();
-        assert_eq!(load_saved_token(base_url).unwrap(), Some(token));
+        assert_eq!(load_saved_token(base_url, "subuser").unwrap(), Some(token));
+    }
+
+    #[tokio::test]
+    async fn run_auth_login_token_flag_no_username_no_sub_errors() {
+        // No --username and no `sub` claim: cannot key the cache → error.
+        let base_url = "http://test-run-auth-flag-nosub.invalid";
+        let token = make_jwt(json!({"exp": 9999999999u64}));
+        let err = run_auth(
+            AuthCmd::Login,
+            base_url,
+            Some(&token),
+            None,
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap_err();
+        assert!(err.to_string().contains("--username"));
     }
 
     #[tokio::test]
     async fn run_auth_login_cached_token_succeeds_without_credentials() {
         let base_url = "http://test-run-auth-cached.invalid";
         let token = make_jwt(json!({"exp": 9999999999u64}));
-        save_token(base_url, &token).unwrap();
-        // No credentials — must succeed via cache without hitting any server
+        save_token(base_url, "cacheuser", &token).unwrap();
+        // No password — must succeed via cache (keyed by username) without
+        // hitting any server.
         run_auth(
             AuthCmd::Login,
             base_url,
             None,
-            None,
+            Some("cacheuser"),
             None,
             None,
             &OutputFormat::Compact,
@@ -360,7 +487,7 @@ mod tests {
     #[tokio::test]
     async fn run_auth_login_no_credentials_returns_exit_code_4() {
         let base_url = "http://test-run-auth-no-creds.invalid";
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
+        let _ = std::fs::remove_file(token_file(base_url, "tester").unwrap());
         let err = run_auth(
             AuthCmd::Login,
             base_url,
@@ -387,12 +514,12 @@ mod tests {
     async fn run_auth_status_with_valid_token_is_ok() {
         let base_url = "http://test-run-auth-status-ok.invalid";
         let token = make_jwt(json!({"exp": 9999999999u64}));
-        save_token(base_url, &token).unwrap();
+        save_token(base_url, "statususer", &token).unwrap();
         run_auth(
             AuthCmd::Status,
             base_url,
             None,
-            None,
+            Some("statususer"),
             None,
             None,
             &OutputFormat::Compact,
@@ -405,7 +532,24 @@ mod tests {
     async fn run_auth_status_without_token_is_ok() {
         // Status with no cached token should still return Ok (prints authenticated: false)
         let base_url = "http://test-run-auth-status-none.invalid";
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
+        let _ = std::fs::remove_file(token_file(base_url, "statususer").unwrap());
+        run_auth(
+            AuthCmd::Status,
+            base_url,
+            None,
+            Some("statususer"),
+            None,
+            None,
+            &OutputFormat::Compact,
+        )
+        .await
+        .unwrap();
+    }
+
+    #[tokio::test]
+    async fn run_auth_status_without_username_reports_unauthenticated() {
+        // No username → cannot identify a cache entry → authenticated: false, Ok.
+        let base_url = "http://test-run-auth-status-no-user.invalid";
         run_auth(
             AuthCmd::Status,
             base_url,

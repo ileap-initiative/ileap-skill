@@ -14,6 +14,7 @@ thiserror = "2"
 base64 = "0.22"
 clap = { version = "4", features = ["derive", "env"] }
 dirs = "5"
+percent-encoding = "2"
 reqwest = { version = "0.12", features = ["json"] }
 rpassword = "7"
 serde = { version = "1", features = ["derive"] }
