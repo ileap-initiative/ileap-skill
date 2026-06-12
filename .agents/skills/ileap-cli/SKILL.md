@@ -38,7 +38,7 @@ If the file exists but cannot be read or is empty, stop and inform the user: "SC
 
 ## Prerequisites
 
-This skill is self-contained and works in any environment, including sandboxed ones (e.g. Claude.ai) without a Rust toolchain. Obtain a working `ileap` binary by trying these steps **in order** — stop at the first one that succeeds:
+This skill uses **prebuilt `ileap` binaries only** — never compile the CLI at runtime (no `cargo install`, no `cargo run`, no `cargo build`). The binaries are built from the ileap-cli repository and shipped inside the skill bundle, so the skill works in any environment, including sandboxed ones (e.g. Claude.ai) without a Rust toolchain. Obtain a working binary by trying these steps **in order** — stop at the first one that succeeds:
 
 **Step 1 — Already on PATH?**
 
@@ -48,7 +48,7 @@ which ileap || echo "not installed"
 
 If found, use it and skip the rest of this section.
 
-**Step 2 — Bundled binary.** The skill directory may contain prebuilt binaries at `bin/ileap-<OS>-<ARCH>` (e.g. `bin/ileap-Linux-x86_64`, `bin/ileap-Linux-aarch64`). Check for one matching the current platform:
+**Step 2 — Bundled binary.** The skill directory contains prebuilt binaries at `bin/ileap-<OS>-<ARCH>` (e.g. `bin/ileap-Linux-x86_64`, `bin/ileap-Linux-aarch64`, `bin/ileap-Darwin-arm64`). Use the one matching the current platform:
 
 ```bash
 SKILL_DIR=<absolute path of the directory containing this SKILL.md>
@@ -62,22 +62,7 @@ fi
 
 If `ileap --version` succeeds, use it and skip the rest of this section. Remember to prepend `/tmp/ileap-bin` to PATH (or use the absolute path `/tmp/ileap-bin/ileap`) in every subsequent shell invocation, since environment changes do not persist between commands.
 
-**Step 3 — Install with Cargo from the GitHub repository** (requires Rust and network access; works from any directory, no local checkout needed):
-
-```bash
-cargo install --git https://github.com/sine-fdn/ileap-cli-test --locked ileap-cli
-which ileap || export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-If `cargo` itself is unavailable and the environment allows installing it:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-```
-
-**Step 4 — All of the above failed.** Report to the user which steps were attempted and the error from each, then stop — do not attempt to fetch data or generate a dashboard without a working CLI binary. If errors indicate a network or git failure (e.g. "failed to clone", "could not resolve host"), additionally inform the user: "Check network connectivity and that https://github.com/sine-fdn/ileap-cli-test is reachable."
-
-**Always use the `ileap` binary** — never fall back to `cargo run --`. The binary keeps all subsequent commands uniform across environments and permission systems.
+**Step 3 — No binary available.** Report to the user which platform was detected (`uname -s` / `uname -m`) and which binaries exist in the skill's `bin/` directory, then stop — do not attempt to fetch data or generate a dashboard without a working CLI binary, and do not compile one. Inform the user: "The skill bundle has no `ileap` binary for this platform. Rebuild the bundle from the ileap-cli repository using `scripts/build-skill-binaries.sh` and `scripts/package-skill.sh`."
 
 ## Overview
 

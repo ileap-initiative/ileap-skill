@@ -1,31 +1,46 @@
 #!/usr/bin/env bash
-# Build static Linux binaries for the ileap-cli skill bundle using Docker,
-# and place them in .agents/skills/ileap-cli/bin/.
+# Build prebuilt `ileap` binaries for the ileap-cli skill bundle from the
+# LOCAL repository source, and place them in .agents/skills/ileap-cli/bin/.
 #
-# These are the binaries the skill uses in sandboxed agent environments
-# (e.g. Claude.ai) where no Rust toolchain is available.
+# The skill uses prebuilt binaries exclusively (no Rust toolchain at runtime),
+# so this must be run before packaging the skill with scripts/package-skill.sh.
 #
-# Usage: scripts/build-skill-binaries.sh [git-url]
-#   git-url defaults to https://github.com/sine-fdn/ileap-cli-test
+# Builds:
+#   - ileap-Linux-x86_64 and ileap-Linux-aarch64 (static musl, via Docker)
+#   - ileap-<host OS>-<host arch> natively, if cargo is available
+#
+# Usage: scripts/build-skill-binaries.sh
 set -euo pipefail
 
-GIT_URL="${1:-https://github.com/sine-fdn/ileap-cli-test}"
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 BIN_DIR="$REPO_ROOT/.agents/skills/ileap-cli/bin"
 mkdir -p "$BIN_DIR"
 
-build() {
+build_linux() {
   local platform="$1" arch="$2" out
   out="$(mktemp -d)"
-  echo "building $arch (this can take several minutes)..."
-  docker run --rm --platform "$platform" -v "$out:/out" -e OPENSSL_STATIC=1 rust:alpine \
-    sh -c "apk add -q musl-dev git pkgconfig openssl-dev openssl-libs-static && \
-           cargo install --git $GIT_URL --locked ileap-cli --root /out"
+  echo "building Linux $arch from local source (this can take several minutes)..."
+  docker run --rm --platform "$platform" \
+    -v "$REPO_ROOT:/src:ro" -v "$out:/out" \
+    -e OPENSSL_STATIC=1 -e CARGO_TARGET_DIR=/build \
+    rust:alpine \
+    sh -c "apk add -q musl-dev pkgconfig openssl-dev openssl-libs-static && \
+           cargo install --path /src --locked --root /out"
   cp "$out/bin/ileap" "$BIN_DIR/ileap-Linux-$arch"
   rm -rf "$out"
   echo "wrote $BIN_DIR/ileap-Linux-$arch"
 }
 
-build linux/amd64 x86_64
-build linux/arm64 aarch64
+build_linux linux/amd64 x86_64
+build_linux linux/arm64 aarch64
+
+if command -v cargo >/dev/null 2>&1; then
+  echo "building native host binary..."
+  cargo build --release --locked --manifest-path "$REPO_ROOT/Cargo.toml"
+  cp "$REPO_ROOT/target/release/ileap" "$BIN_DIR/ileap-$(uname -s)-$(uname -m)"
+  echo "wrote $BIN_DIR/ileap-$(uname -s)-$(uname -m)"
+else
+  echo "note: cargo not found, skipping native host binary" >&2
+fi
+
 ls -lh "$BIN_DIR"

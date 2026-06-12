@@ -1,8 +1,8 @@
 name: Release binaries
 
-# Builds static musl binaries for Linux (the targets the agent skill bundles
-# and that match sandboxed agent environments such as Claude.ai), plus macOS,
-# and attaches them to a GitHub release when a tag is pushed.
+# Builds the prebuilt binaries the agent skill bundles, from this repository:
+# static musl binaries for Linux (matching sandboxed agent environments such
+# as Claude.ai) plus macOS, attached to a GitHub release when a tag is pushed.
 #
 # Note: reqwest currently uses native-tls, so the musl builds statically link
 # OpenSSL (hence the alpine container + openssl-libs-static). Switching

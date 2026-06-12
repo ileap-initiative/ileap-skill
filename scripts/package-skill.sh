@@ -22,8 +22,9 @@ if ls "$STAGING/ileap-cli/bin/ileap-"* >/dev/null 2>&1; then
   echo "bundled binaries:"
   ls -lh "$STAGING/ileap-cli/bin/"
 else
-  echo "warning: no prebuilt binaries in $SKILL_SRC/bin/ — the skill will" >&2
-  echo "         require a Rust toolchain at runtime (not available on Claude.ai)." >&2
+  echo "error: no prebuilt binaries in $SKILL_SRC/bin/ — the skill uses" >&2
+  echo "       prebuilt binaries exclusively. Run scripts/build-skill-binaries.sh first." >&2
+  exit 1
 fi
 
 rm -f "$DIST/ileap-cli-skill.zip"
