@@ -1,5 +1,5 @@
 ---
-name: ileap-cli
+name: ileap
 description: >-
   Use the iLEAP CLI to query, filter, and explore iLEAP API resources (shipments, footprints,
   tocs, hocs, tad, aed). REQUIRED for all iLEAP work — use this skill before reading source
