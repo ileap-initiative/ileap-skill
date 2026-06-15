@@ -61,10 +61,23 @@ $(ZOLA):
 	@$(ZOLA) --version
 
 # --- Build / serve the site --------------------------------------------------
+# Zola bakes base_url into absolute URLs at build time, so the static value in
+# site/config.toml would break Vercel preview deploys (unique host per deploy).
+# make reads the environment directly: on a Vercel preview/dev build we override
+# base_url with this deploy's own host ($VERCEL_URL); production and local builds
+# use site/config.toml. Override manually any time with: make site-build BASE_URL=...
+ifneq ($(VERCEL_URL),)
+ifneq ($(VERCEL_ENV),production)
+BASE_URL ?= https://$(VERCEL_URL)
+endif
+endif
+
+ZOLA_BUILD_FLAGS := $(if $(BASE_URL),--base-url $(BASE_URL),)
+
 .PHONY: site-build
-site-build: $(ZOLA) ## Build the site to site/public
-	cd $(SITE_DIR) && $(ZOLA) build
-	@echo "Built into $(SITE_DIR)/public"
+site-build: $(ZOLA) ## Build to site/public (override host with BASE_URL=...)
+	cd $(SITE_DIR) && $(ZOLA) build $(ZOLA_BUILD_FLAGS)
+	@echo "Built into $(SITE_DIR)/public$(if $(BASE_URL), (base-url $(BASE_URL)),)"
 
 .PHONY: site-serve
 site-serve: $(ZOLA) ## Run the local dev server (http://127.0.0.1:1111)
