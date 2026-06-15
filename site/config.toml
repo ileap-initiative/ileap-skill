@@ -1,7 +1,7 @@
 # Zola configuration for the iLEAP skill microsite (see docs/adr/0010).
 # TODO(ADR-0010 open item): set base_url to the chosen *.ileap.global subdomain
 # before launch.
-base_url = "https://skill.ileap.global"
+base_url = "https://skill.ileap.dev"
 title = "iLEAP Skill for Claude"
 description = "Query and visualize iLEAP transport-emissions data in Claude, in plain language."
 
@@ -19,5 +19,6 @@ zip_url = "https://github.com/sine-fdn/ileap-cli/releases/latest/download/ileap-
 repo_url = "https://github.com/sine-fdn/ileap-cli"
 demo_url = "https://api.preview.ileap.dev"
 tagline = "Turn iLEAP transport-emissions data into dashboards, scenarios and reports — by asking Claude in plain language."
-cta_label = "Install the skill"
-provider_note = "An open skill provided by sustainability NGOs. Works with Claude today; portable to any agent that supports skills or MCP."
+cta_label = "Download the iLEAP skill"
+provider_note = "Provided by SINE and Smart Freight Centre as part of the iLEAP Initiative. Works with Claude today; portable to any agent that supports skills or MCP."
+mission = "Accelerating the decarbonization of global logistics through digitization and standardization."

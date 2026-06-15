@@ -11,13 +11,19 @@
 
 <div class="preview-banner">Preview &middot; example outputs are generated from sample demo data.</div>
 
-<header class="hero">
+<header class="topbar">
+  <div class="wrap">
+    <img class="logo" src="{{ get_url(path='ileap-logo.png') }}" alt="iLEAP">
+  </div>
+</header>
+
+<section class="hero">
   <div class="wrap">
     <h1>{{ config.title }}</h1>
     <p class="tagline">{{ config.extra.tagline }}</p>
     <a class="cta" href="{{ config.extra.zip_url }}">{{ config.extra.cta_label }}</a>
   </div>
-</header>
+</section>
 
 <main class="wrap content">
 
@@ -55,6 +61,7 @@
 
 <footer class="footer">
   <div class="wrap">
+    <p class="mission">{{ config.extra.mission }}</p>
     <p>{{ config.extra.provider_note }}</p>
     <p><a href="{{ config.extra.repo_url }}">Source and license on GitHub</a></p>
     <p class="fine">Preview. Example outputs were generated from the public iLEAP demo server
