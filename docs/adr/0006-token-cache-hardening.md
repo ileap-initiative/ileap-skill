@@ -2,8 +2,11 @@
 
 ## Status
 
-Proposed (2026-06-11). Promotes backlog candidate **C4** and widens it with two
-related defects found in review.
+Proposed (2026-06-11) — **implemented** in
+[PR #13](https://github.com/sine-fdn/ileap-cli/pull/13)
+(branch `adr-0006-token-cache-hardening`). Promotes backlog candidate **C4**
+and widens it with two related defects found in review. See
+**Implementation** at the end of this document.
 
 ## Context
 
@@ -136,3 +139,27 @@ cargo build && cargo clippy --all-targets -- -D warnings && cargo test
 
 Manually: `ileap auth login` then `ls -l ~/.config/ileap/` shows `-rw-------`
 and a scheme-prefixed filename.
+
+## Implementation
+
+Implemented on branch `adr-0006-token-cache-hardening`
+([PR #13](https://github.com/sine-fdn/ileap-cli/pull/13), 2026-06-11), based on
+`main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
+-- -D warnings` clean; `cargo test` pass (**34 unit + 10 integration, 0
+failed**), including the two new tests from §3: `token_file_distinguishes_schemes`
+and `save_token_sets_owner_only_permissions` (`#[cfg(unix)]`).
+
+**Files:** `src/auth.rs` only, as planned.
+
+**Deviations from the Changes text:** none of substance.
+- §1: `token_file` returns `anyhow::Result<PathBuf>` (the file's style above
+  the `CliError` boundary, as the ADR allowed); test call sites gained
+  `.unwrap()`.
+- §2: implemented with `opts.open(&path)` +
+  `std::io::Write::write_all` exactly as sketched; the existing
+  `.with_context(...)` message is preserved.
+- §4 (docs): no changelog/README-for-users file exists in the repo, so the
+  one-time re-login note lives in the commit message and PR body only.
+
+**Resulting filename format** (example): `https://api.example.com` →
+`token_https___api_example_com`.
