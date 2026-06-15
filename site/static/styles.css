@@ -1,0 +1,49 @@
+/* iLEAP skill microsite — see docs/adr/0010. Palette matches the demo dashboard. */
+:root {
+  --green-900:#0f4c35; --green-700:#1a7a55; --green-500:#22c55e; --green-100:#dcfce7;
+  --green-50:#f0fdf4; --amber-500:#f59e0b; --gray-50:#f8fafc; --gray-100:#f1f5f9;
+  --gray-200:#e2e8f0; --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155;
+  --gray-800:#1e293b; --white:#fff;
+  --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --radius:14px;
+}
+* { box-sizing:border-box; margin:0; padding:0; }
+body { font-family:'Inter',system-ui,-apple-system,sans-serif; color:var(--gray-800);
+  background:var(--gray-50); line-height:1.6; }
+.wrap { max-width:920px; margin:0 auto; padding:0 20px; }
+
+.preview-banner { background:var(--amber-500); color:#fff; text-align:center;
+  font-size:13px; font-weight:600; padding:7px 12px; }
+
+.hero { background:linear-gradient(160deg,var(--green-900),var(--green-700));
+  color:#fff; padding:64px 0 56px; text-align:center; }
+.hero h1 { font-size:40px; letter-spacing:-.02em; }
+.hero .tagline { font-size:18px; max-width:640px; margin:14px auto 28px; color:var(--green-100); }
+.cta { display:inline-block; background:#fff; color:var(--green-900); font-weight:700;
+  padding:13px 26px; border-radius:999px; text-decoration:none; box-shadow:var(--shadow); }
+.cta:hover { background:var(--green-50); }
+
+.content { padding:48px 20px 24px; }
+.content h2 { color:var(--green-900); font-size:24px; margin:36px 0 12px; }
+.content h3 { color:var(--green-900); font-size:18px; margin:24px 0 10px; }
+.content p { margin:10px 0; }
+.content ol { margin:12px 0 12px 22px; }
+.content ol li { margin:6px 0; }
+.content a { color:var(--green-700); }
+
+.muted { color:var(--gray-500); font-size:14px; }
+
+.demos { margin-top:24px; }
+.demo { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:22px; margin:20px 0; }
+.demo .prompt { background:var(--gray-100); border:1px solid var(--gray-200); border-radius:8px;
+  padding:12px 14px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px;
+  white-space:pre-wrap; color:var(--gray-700); margin:8px 0 14px; }
+.demo iframe { width:100%; height:560px; border:1px solid var(--gray-200); border-radius:10px;
+  background:#fff; }
+.downloads { font-size:15px; }
+
+.footer { border-top:1px solid var(--gray-200); margin-top:40px; padding:28px 0 48px;
+  color:var(--gray-500); font-size:14px; }
+.footer a { color:var(--green-700); }
+.footer .fine { font-size:12px; color:var(--gray-400); margin-top:10px; }

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iLEAP Decarbonization Scenario Planner</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-900:#0f4c35; --green-700:#1a7a55; --green-500:#22c55e; --green-100:#dcfce7;
+  --green-50:#f0fdf4; --amber-500:#f59e0b; --gray-50:#f8fafc; --gray-100:#f1f5f9;
+  --gray-200:#e2e8f0; --gray-400:#94a3b8; --gray-500:#64748b; --gray-700:#334155;
+  --gray-800:#1e293b; --white:#fff; --shadow:0 1px 3px rgba(0,0,0,.08),0 1px 2px rgba(0,0,0,.04);
+  --radius:14px;
+}
+body { font-family:'Inter',system-ui,-apple-system,sans-serif; background:var(--gray-50);
+  color:var(--gray-800); line-height:1.5; padding:32px 20px; }
+.wrap { max-width:980px; margin:0 auto; }
+header h1 { font-size:26px; color:var(--green-900); }
+header p { color:var(--gray-500); margin-top:6px; font-size:14px; }
+.preview { display:inline-block; margin-top:10px; padding:4px 10px; border-radius:999px;
+  background:var(--amber-500); color:#fff; font-size:12px; font-weight:600; letter-spacing:.02em; }
+.grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-top:24px; }
+@media (max-width:760px){ .grid { grid-template-columns:1fr; } }
+.card { background:var(--white); border:1px solid var(--gray-200); border-radius:var(--radius);
+  box-shadow:var(--shadow); padding:22px; }
+.card h2 { font-size:15px; color:var(--green-900); margin-bottom:16px; text-transform:uppercase;
+  letter-spacing:.04em; }
+.control { margin-bottom:20px; }
+.control label { display:flex; justify-content:space-between; font-size:14px; font-weight:600;
+  color:var(--gray-700); margin-bottom:6px; }
+.control .val { color:var(--green-700); }
+input[type=range] { width:100%; accent-color:var(--green-500); }
+input[type=number] { width:120px; padding:6px 8px; border:1px solid var(--gray-200);
+  border-radius:8px; font-size:14px; }
+.hint { font-size:12px; color:var(--gray-400); margin-top:4px; }
+.result { text-align:center; padding:8px 0 18px; }
+.result .big { font-size:44px; font-weight:700; color:var(--green-700); line-height:1.1; }
+.result .sub { color:var(--gray-500); font-size:14px; margin-top:4px; }
+.kpis { display:flex; gap:14px; margin-top:8px; }
+.kpi { flex:1; background:var(--green-50); border:1px solid var(--green-100); border-radius:10px;
+  padding:12px; text-align:center; }
+.kpi .n { font-size:20px; font-weight:700; color:var(--green-900); }
+.kpi .l { font-size:11px; color:var(--gray-500); text-transform:uppercase; letter-spacing:.03em; margin-top:2px; }
+.method { background:var(--gray-100); border-radius:10px; padding:16px; font-size:13px;
+  color:var(--gray-700); margin-top:20px; }
+.method h3 { font-size:13px; color:var(--gray-800); margin-bottom:8px; }
+.method ul { margin:0 0 0 18px; }
+.method code { background:var(--white); padding:1px 5px; border-radius:4px; font-size:12px; }
+.disclaimer { font-size:12px; color:var(--gray-500); margin-top:18px; text-align:center; }
+canvas { max-height:240px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>iLEAP Decarbonization Scenario Planner</h1>
+    <p>Explore how modal shift, load factor and electrification change transport CO2e.
+       Baseline derived from the iLEAP public demo dataset.</p>
+    <span class="preview">PREVIEW &middot; indicative figures</span>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Levers</h2>
+
+      <div class="control">
+        <label>Annual transport activity <span class="val" id="taVal"></span></label>
+        <input type="number" id="ta" value="16920" min="0" step="100">
+        <div class="hint">tonne-kilometres (tkm). Demo default 16,920 tkm.</div>
+      </div>
+
+      <div class="control">
+        <label>Shift Road to Rail <span class="val" id="msVal">0%</span></label>
+        <input type="range" id="ms" min="0" max="100" value="0">
+        <div class="hint">Share of activity moved from Road (0.116) to Rail (0.007) kg CO2e/tkm WTW.</div>
+      </div>
+
+      <div class="control">
+        <label>Electrify remaining road <span class="val" id="esVal">0%</span></label>
+        <input type="range" id="es" min="0" max="100" value="0">
+        <div class="hint">Share of remaining road switched to electric (illustrative 0.030 kg/tkm).</div>
+      </div>
+
+      <div class="control">
+        <label>Load factor improvement <span class="val" id="lfVal">0%</span></label>
+        <input type="range" id="lf" min="0" max="40" value="0">
+        <div class="hint">Better loading lowers road intensity proportionally (illustrative).</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Result</h2>
+      <div class="result">
+        <div class="big" id="reduction">0%</div>
+        <div class="sub">reduction in CO2e (WTW) vs baseline</div>
+      </div>
+      <div class="kpis">
+        <div class="kpi"><div class="n" id="baseKg">0</div><div class="l">Baseline kg</div></div>
+        <div class="kpi"><div class="n" id="scenKg">0</div><div class="l">Scenario kg</div></div>
+        <div class="kpi"><div class="n" id="savedKg">0</div><div class="l">Avoided kg</div></div>
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
+  </div>
+
+  <div class="method">
+    <h3>How this is calculated</h3>
+    <ul>
+      <li>WTW = Well-to-Wheel. TOC = Transport Operation Category. Intensities are kg CO2e per tonne-km.</li>
+      <li>Baseline assumes all activity is Road diesel at <code>0.116</code> (a real demo TOC). At the demo default
+          16,920 tkm this gives <code>1,962.72</code> kg, matching the demo's reported WTW emissions.</li>
+      <li>Rail intensity <code>0.007</code> is real (demo TOC <code>toc-rail-1</code>). Electric-road
+          <code>0.030</code> and the load-factor effect are <strong>illustrative</strong> placeholders, not measured TOCs.</li>
+      <li>Scenario = railShare&times;0.007 + roadShare&times;(elec&times;0.030 + (1&minus;elec)&times;0.116)&times;(1&minus;loadGain).</li>
+    </ul>
+  </div>
+
+  <p class="disclaimer">Indicative preview generated from iLEAP sample demo data
+     (api.preview.ileap.dev). Not abatement advice; figures will vary by agent, environment and run.</p>
+</div>
+
+<script>
+const ROAD = 0.116, RAIL = 0.007, ROAD_ELEC = 0.030;
+const el = id => document.getElementById(id);
+let chart;
+
+function fmt(n){ return Math.round(n).toLocaleString(); }
+
+function compute(){
+  const ta = parseFloat(el('ta').value) || 0;
+  const ms = parseFloat(el('ms').value) / 100;
+  const es = parseFloat(el('es').value) / 100;
+  const lf = parseFloat(el('lf').value) / 100;
+  el('msVal').textContent = Math.round(ms*100) + '%';
+  el('esVal').textContent = Math.round(es*100) + '%';
+  el('lfVal').textContent = Math.round(lf*100) + '%';
+
+  const baseline = ta * ROAD;
+  const railTkm = ta * ms;
+  const roadTkm = ta * (1 - ms);
+  const roadIntensity = (es * ROAD_ELEC + (1 - es) * ROAD) * (1 - lf);
+  const scenario = railTkm * RAIL + roadTkm * roadIntensity;
+  const saved = Math.max(0, baseline - scenario);
+  const pct = baseline > 0 ? (saved / baseline * 100) : 0;
+
+  el('reduction').textContent = pct.toFixed(0) + '%';
+  el('baseKg').textContent = fmt(baseline);
+  el('scenKg').textContent = fmt(scenario);
+  el('savedKg').textContent = fmt(saved);
+  draw(baseline, scenario);
+}
+
+function draw(baseline, scenario){
+  const data = {
+    labels: ['Baseline', 'Scenario'],
+    datasets: [{ label: 'kg CO2e (WTW)', data: [baseline, scenario],
+      backgroundColor: ['#94a3b8', '#22c55e'], borderRadius: 6 }]
+  };
+  if (chart){ chart.data = data; chart.update(); return; }
+  chart = new Chart(el('chart'), { type: 'bar', data,
+    options: { plugins:{ legend:{ display:false } }, responsive:true,
+      scales:{ y:{ beginAtZero:true, title:{ display:true, text:'kg CO2e (WTW)' } } } } });
+}
+
+['ta','ms','es','lf'].forEach(id => el(id).addEventListener('input', compute));
+compute();
+</script>
+</body>
+</html>

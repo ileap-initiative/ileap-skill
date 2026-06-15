@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iLEAP Emissions Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --green-900: #0f4c35;
+  --green-700: #1a7a55;
+  --green-500: #22c55e;
+  --green-200: #86efac;
+  --green-100: #dcfce7;
+  --green-50: #f0fdf4;
+  --amber-500: #f59e0b;
+  --amber-100: #fef3c7;
+  --red-500: #ef4444;
+  --red-100: #fee2e2;
+  --blue-500: #3b82f6;
+  --blue-100: #dbeafe;
+  --sky-100: #e0f2fe;
+  --sky-900: #0c4a6e;
+  --gray-50: #f8fafc;
+  --gray-100: #f1f5f9;
+  --gray-200: #e2e8f0;
+  --gray-300: #cbd5e1;
+  --gray-400: #94a3b8;
+  --gray-500: #64748b;
+  --gray-700: #334155;
+  --gray-800: #1e293b;
+  --white: #ffffff;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
+  --radius-lg: 14px;
+  --radius-md: 8px;
+}
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--gray-50);
+  color: var(--gray-800);
+  line-height: 1.5;
+  font-size: 14px;
+}
+.container { max-width: 1440px; margin: 0 auto; padding: 32px 24px; }
+
+/* ── Header ── */
+.header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid var(--gray-200);
+}
+.header-left { display: flex; align-items: center; gap: 16px; }
+.logo { display: flex; align-items: center; gap: 8px; }
+.logo-wordmark {
+  font-size: 26px; font-weight: 800; color: var(--green-900);
+  letter-spacing: -0.5px; line-height: 1;
+}
+.logo-dot { color: var(--green-500); }
+.logo-tag {
+  background: var(--green-100); color: var(--green-900);
+  font-size: 11px; font-weight: 700; padding: 3px 8px;
+  border-radius: 5px; text-transform: uppercase; letter-spacing: 0.06em;
+}
+.header-divider { width: 1px; height: 36px; background: var(--gray-200); }
+.header-title { font-size: 20px; font-weight: 600; color: var(--gray-800); }
+.header-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
+.header-meta { text-align: right; font-size: 13px; color: var(--gray-500); }
+.header-meta strong { color: var(--gray-700); }
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
+.kpi-card {
+  background: var(--white); border-radius: var(--radius-lg); padding: 22px 24px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--gray-100);
+}
+.kpi-icon { font-size: 22px; margin-bottom: 12px; }
+.kpi-label { font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
+.kpi-value { font-size: 32px; font-weight: 800; color: var(--gray-800); line-height: 1; }
+.kpi-value.green { color: var(--green-700); }
+.kpi-unit { font-size: 12px; color: var(--gray-400); margin-top: 5px; }
+
+/* ── Two-column chart row ── */
+.charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; margin-bottom: 28px; }
+.card {
+  background: var(--white); border-radius: var(--radius-lg); padding: 24px;
+  box-shadow: var(--shadow-sm); border: 1px solid var(--gray-100);
+}
+.card-title {
+  font-size: 14px; font-weight: 700; color: var(--gray-800);
+  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
+}
+.card-title-icon {
+  width: 28px; height: 28px; border-radius: 7px; background: var(--green-100);
+  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
+}
+.chart-wrap { position: relative; height: 270px; }
+
+/* ── Opportunities ── */
+.opp-header {
+  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+}
+.opp-empty { text-align: center; padding: 40px; color: var(--gray-400); }
+.opp-item {
+  display: grid; grid-template-columns: 44px 1fr auto;
+  align-items: center; gap: 14px;
+  padding: 16px; border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md); margin-bottom: 10px;
+  transition: border-color .15s, background .15s;
+}
+.opp-item:hover { border-color: var(--green-500); background: var(--green-50); }
+.opp-rank {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--green-100); display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 10px; font-weight: 700; color: var(--green-700);
+}
+.opp-rank .rank-num { font-size: 18px; line-height: 1; }
+.opp-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
+.opp-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
+.opp-pills { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.opp-arrow { font-size: 12px; color: var(--gray-400); }
+.opp-intensities {
+  font-size: 11px; color: var(--gray-500); margin-left: 2px;
+  background: var(--gray-100); padding: 2px 7px; border-radius: 4px;
+}
+.opp-savings-box { text-align: right; min-width: 100px; }
+.opp-savings-amt { font-size: 24px; font-weight: 800; color: #16a34a; line-height: 1; }
+.opp-savings-pct { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th {
+  text-align: left; padding: 9px 14px; border-bottom: 2px solid var(--gray-200);
+  font-size: 11px; font-weight: 700; color: var(--gray-500);
+  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
+}
+td { padding: 12px 14px; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
+tr:last-child td { border-bottom: none; }
+tbody tr.main-row:hover td { background: var(--gray-50); }
+code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--gray-700); }
+
+/* ── Badges ── */
+.badge {
+  display: inline-block; padding: 3px 8px; border-radius: 10px;
+  font-size: 11px; font-weight: 600; white-space: nowrap;
+}
+.badge-Road { background: var(--amber-100); color: #92400e; }
+.badge-Rail { background: var(--green-100); color: #166534; }
+.badge-Air { background: var(--red-100); color: #991b1b; }
+.badge-Sea { background: var(--blue-100); color: #1e40af; }
+.badge-InlandWaterway { background: var(--sky-100); color: var(--sky-900); }
+.badge-Active { background: var(--green-100); color: #166534; }
+.badge-Deprecated { background: var(--gray-100); color: var(--gray-500); }
+
+/* ── Intensity bar ── */
+.intensity-cell { display: flex; align-items: center; gap: 8px; }
+.intensity-bar { width: 64px; height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
+.ibar-low { background: var(--green-500); height: 100%; border-radius: 3px; }
+.ibar-mid { background: var(--amber-500); height: 100%; border-radius: 3px; }
+.ibar-high { background: var(--red-500); height: 100%; border-radius: 3px; }
+
+/* ── TCE rows ── */
+.tce-grid {
+  display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
+  gap: 6px 12px; font-size: 11px; padding: 8px 12px;
+  background: var(--gray-50); border-radius: 6px; margin-top: 6px;
+}
+.tce-lbl { color: var(--gray-400); }
+.tce-val { color: var(--gray-700); font-weight: 500; }
+.tce-expand { padding: 0 14px 14px; border-bottom: 1px solid var(--gray-100); }
+
+/* ── Mode legend ── */
+.mode-legend { display: flex; gap: 12px; flex-wrap: wrap; }
+.mode-leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--gray-500); }
+.mode-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+/* ── Footer ── */
+.footer {
+  text-align: center; color: var(--gray-400); font-size: 12px;
+  padding: 28px 0 0; margin-top: 8px; border-top: 1px solid var(--gray-200);
+}
+.footer a { color: var(--green-700); text-decoration: none; }
+.footer a:hover { text-decoration: underline; }
+
+@media (max-width: 1024px) {
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .charts-row { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .kpi-grid { grid-template-columns: 1fr; }
+  .header { flex-direction: column; align-items: flex-start; gap: 12px; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="logo">
+        <div class="logo-wordmark">i<span class="logo-dot">.</span>LEAP</div>
+        <div class="logo-tag">Dashboard</div>
+      </div>
+      <div class="header-divider"></div>
+      <div>
+        <div class="header-title">Emissions Overview</div>
+        <div class="header-sub" id="header-sub">Loading…</div>
+      </div>
+    </div>
+    <div class="header-meta" id="header-meta"></div>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="kpi-grid" id="kpi-grid"></div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="card">
+      <div class="card-title">
+        CO₂e WTW per Shipment (kg)
+      </div>
+      <div class="chart-wrap"><canvas id="chart-shipments"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">
+        TOC Emission Intensity (kg CO₂e / t·km)
+      </div>
+      <div class="chart-wrap"><canvas id="chart-tocs"></canvas></div>
+      <div class="mode-legend" id="mode-legend" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- Reduction Opportunities -->
+  <div class="card" style="margin-bottom:28px;">
+    <div class="card-title">
+      Where to Reduce Your Emissions
+    </div>
+    <div id="opportunities"></div>
+  </div>
+
+  <!-- TOCs Table -->
+  <div class="card" style="margin-bottom:28px;">
+    <div class="card-title">
+      Transport Operation Categories (TOCs)
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>TOC ID</th>
+            <th>Mode</th>
+            <th>WTW Intensity</th>
+            <th>TTW Intensity</th>
+            <th>Load Factor</th>
+            <th>Loading</th>
+            <th>Energy Carriers</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="tocs-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Shipments Table -->
+  <div class="card" style="margin-bottom:28px;">
+    <div class="card-title">
+      Shipments &amp; Transport Chain Elements
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Shipment ID</th>
+            <th>Company</th>
+            <th>Mass (kg)</th>
+            <th>CO₂e WTW (kg)</th>
+            <th>CO₂e TTW (kg)</th>
+            <th>TCEs</th>
+            <th>Period</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="shipments-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>Generated by <strong>iLEAP CLI</strong> &nbsp;·&nbsp;
+    Data from <a href="https://ileap.sine.dev" target="_blank">iLEAP API</a> &nbsp;·&nbsp;
+    Standards: ISO 14083:2023 &amp; GLEC Framework</p>
+  </div>
+</div>
+
+<script>
+const DATA = {"shipments":[{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"40000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"shipment-simple-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"1505.88","co2eWTW":"1962.72","distance":{"actual":"423"},"mass":"40000","prevTceIds":[],"shipmentId":"shipment-1","tceId":"abcdef","tocId":"truck-40t-euro5-de","transportActivity":"16920"}]},{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"40000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"shipment-multi-modal-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"0","co2eWTW":"118.44","distance":{"actual":"423"},"mass":"40000","prevTceIds":[],"shipmentId":"shipment-multi-modal-1","tceId":"tce-1-toc-rail-1","tocId":"toc-rail-1","transportActivity":"16920"},{"co2eTTW":"400","co2eWTW":"1320","distance":{"actual":"0"},"hocId":"hoc-transshipment-1","mass":"40000","prevTceIds":["tce-1-toc-rail-1"],"shipmentId":"shipment-multi-modal-1","tceId":"tce-2-hoc-transshipment-1","transportActivity":"0"},{"co2eTTW":"1505.88","co2eWTW":"1692.62","distance":{"actual":"423"},"mass":"40000","prevTceIds":["tce-2-hoc-transshipment-1"],"shipmentId":"shipment-multi-modal-1","tceId":"tce-3-toc-road-1","tocId":"toc-road-1","transportActivity":"16920"}]},{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"4000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"pre-and-post-legs-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"73.08","co2eWTW":"95.16","distance":{"actual":"30"},"mass":"4000","prevTceIds":[],"shipmentId":"pre-and-post-legs-1","tceId":"tce-1-pre-leg-1","tocId":"toc-small-truck-1","transportActivity":"120"},{"co2eTTW":"40","co2eWTW":"132","distance":{"actual":"0"},"hocId":"hoc-warehouse-1","mass":"4000","prevTceIds":["tce-1-pre-leg-1"],"shipmentId":"pre-and-post-legs-1","tceId":"tce-2-hub-1","transportActivity":"0"},{"co2eTTW":"121.8","co2eWTW":"158.6","distance":{"actual":"50"},"mass":"4000","prevTceIds":["tce-2-hub-1"],"shipmentId":"pre-and-post-legs-1","tceId":"tce-3-post-leg-1","tocId":"toc-small-truck-1","transportActivity":"200"}]}],"tocs":[{"co2eIntensityTTW":"0","co2eIntensityWTW":"0.007","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.33","energyCarriers":[{"emissionFactorTTW":"0","emissionFactorWTW":"97","energyCarrier":"Electric","energyConsumptionUnit":"MJ","feedstocks":[{"feedstock":"Grid","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Rail","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"ambient","tocId":"toc-rail-1","transportActivityUnit":"tkm"},{"co2eIntensityTTW":"0.089","co2eIntensityWTW":"0.116","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.3","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"refrigerated","tocId":"toc-road-1","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"},{"co2eIntensityTTW":"0.089","co2eIntensityWTW":"0.116","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.3","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"refrigerated","tocId":"truck-40t-euro5-de","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"},{"co2eIntensityTTW":"0.609","co2eIntensityWTW":"0.793","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.1","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.2","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"ambient","tocId":"toc-small-truck-1","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"}]};
+
+// ── Utilities ──────────────────────────────────────────────────────────────────
+
+function fmt(n, dp = 2) {
+  const v = parseFloat(n) || 0;
+  return v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
+
+function fmtShort(n, dp = 1) {
+  const v = parseFloat(n) || 0;
+  if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'k';
+  return v.toFixed(dp);
+}
+
+const MODE_COLOR = {
+  Road: '#f59e0b', Rail: '#22c55e', Air: '#ef4444',
+  Sea: '#3b82f6', InlandWaterway: '#06b6d4',
+};
+const MODE_ICON = {
+  Road: '', Rail: '', Air: '', Sea: '', InlandWaterway: '',
+};
+function mc(mode) { return MODE_COLOR[mode] || '#94a3b8'; }
+function mi(mode) { return MODE_ICON[mode] || ''; }
+
+function badge(text, cls) {
+  return `<span class="badge badge-${cls || text}">${text}</span>`;
+}
+
+function ibarClass(v, max) {
+  const pct = (parseFloat(v) || 0) / max;
+  if (pct < 0.15) return 'ibar-low';
+  if (pct < 0.5)  return 'ibar-mid';
+  return 'ibar-high';
+}
+
+// ── Process Data ───────────────────────────────────────────────────────────────
+
+const shipments = DATA.shipments || [];
+const tocs      = DATA.tocs      || [];
+
+const tocMap = {};
+tocs.forEach(t => { tocMap[t.tocId] = t; });
+
+// Per-shipment totals
+const enriched = shipments.map(s => {
+  const tces = s.tces || [];
+  const co2eWTW = tces.reduce((a, t) => a + (parseFloat(t.co2eWTW) || 0), 0);
+  const co2eTTW = tces.reduce((a, t) => a + (parseFloat(t.co2eTTW) || 0), 0);
+  return { ...s, co2eWTW, co2eTTW };
+});
+
+const totalWTW = enriched.reduce((a, s) => a + s.co2eWTW, 0);
+const totalTTW = enriched.reduce((a, s) => a + s.co2eTTW, 0);
+
+const sortedTocs = [...tocs].sort((a, b) =>
+  (parseFloat(a.co2eIntensityWTW) || 0) - (parseFloat(b.co2eIntensityWTW) || 0)
+);
+const bestToc = sortedTocs[0];
+
+// Best intensity per mode (for reduction analysis)
+const bestByMode = {};
+tocs.forEach(t => {
+  const wtw = parseFloat(t.co2eIntensityWTW) || 0;
+  if (!bestByMode[t.mode] || wtw < bestByMode[t.mode].wtw) {
+    bestByMode[t.mode] = { wtw, toc: t };
+  }
+});
+
+// ── Header ─────────────────────────────────────────────────────────────────────
+
+document.getElementById('header-sub').textContent =
+  `${shipments.length} shipment${shipments.length !== 1 ? 's' : ''} · ${tocs.length} TOC${tocs.length !== 1 ? 's' : ''}`;
+
+document.getElementById('header-meta').innerHTML =
+  `<div>Generated on</div>
+   <strong>${new Date().toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' })}</strong>`;
+
+// ── KPI Cards ──────────────────────────────────────────────────────────────────
+
+const ttwShare = totalWTW > 0 ? ((totalTTW / totalWTW) * 100) : 0;
+
+const kpis = [
+  { icon: '', label: 'Total Shipments', value: shipments.length, unit: 'records', green: false },
+  { icon: '',  label: 'Total CO₂e WTW',  value: fmtShort(totalWTW, 1), unit: 'kg (Well-to-Wheel)', green: false },
+  { icon: '', label: 'TTW Share', value: ttwShare.toFixed(1) + '%', unit: 'of WTW (direct exhaust)', green: false },
+  { icon: '', label: 'Best TOC Intensity', value: bestToc ? fmt(bestToc.co2eIntensityWTW, 3) : '—',
+    unit: bestToc ? `kg/t·km · ${bestToc.mode} · ${bestToc.tocId}` : '', green: true },
+];
+document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
+  <div class="kpi-card">
+    <div class="kpi-icon">${k.icon}</div>
+    <div class="kpi-label">${k.label}</div>
+    <div class="kpi-value${k.green ? ' green' : ''}">${k.value}</div>
+    <div class="kpi-unit">${k.unit}</div>
+  </div>`).join('');
+
+// ── Shipments Chart ────────────────────────────────────────────────────────────
+
+new Chart(document.getElementById('chart-shipments'), {
+  type: 'bar',
+  data: {
+    labels: enriched.map(s => s.shipmentId),
+    datasets: [
+      {
+        label: 'CO₂e WTW',
+        data: enriched.map(s => +s.co2eWTW.toFixed(2)),
+        backgroundColor: '#22c55e',
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+      {
+        label: 'CO₂e TTW',
+        data: enriched.map(s => +s.co2eTTW.toFixed(2)),
+        backgroundColor: '#86efac',
+        borderRadius: 5,
+        borderSkipped: false,
+      },
+    ],
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12, padding: 16 } },
+      tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmt(c.raw)} kg` } },
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
+      y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } },
+           title: { display: true, text: 'kg CO₂e', font: { size: 11 }, color: '#94a3b8' } },
+    },
+  },
+});
+
+// ── TOCs Chart ─────────────────────────────────────────────────────────────────
+
+new Chart(document.getElementById('chart-tocs'), {
+  type: 'bar',
+  data: {
+    labels: sortedTocs.map(t => t.tocId),
+    datasets: [{
+      label: 'WTW Intensity',
+      data: sortedTocs.map(t => parseFloat(t.co2eIntensityWTW) || 0),
+      backgroundColor: sortedTocs.map(t => mc(t.mode)),
+      borderRadius: 5,
+      borderSkipped: false,
+    }],
+  },
+  options: {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (c) => {
+            const t = sortedTocs[c.dataIndex];
+            return [` WTW: ${fmt(c.raw, 3)} kg/t·km`, ` Mode: ${t.mode}`];
+          },
+        },
+      },
+    },
+    scales: {
+      x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
+      y: { grid: { display: false }, ticks: { font: { size: 10 } } },
+    },
+  },
+});
+
+// Mode legend
+const modesPresent = [...new Set(tocs.map(t => t.mode))];
+document.getElementById('mode-legend').innerHTML = modesPresent.map(m => `
+  <div class="mode-leg-item">
+    <div class="mode-dot" style="background:${mc(m)};"></div>
+    ${mi(m)} ${m}
+  </div>`).join('');
+
+// ── Reduction Opportunities ────────────────────────────────────────────────────
+
+function computeOpps() {
+  const results = [];
+  shipments.forEach(s => {
+    (s.tces || []).forEach(tce => {
+      if (!tce.tocId) return;
+      const cur = tocMap[tce.tocId];
+      if (!cur) return;
+
+      const curWTW    = parseFloat(tce.co2eWTW) || 0;
+      const curI      = parseFloat(cur.co2eIntensityWTW) || 0;
+      const activity  = parseFloat(tce.transportActivity) || 0;
+      if (activity <= 0 || curWTW <= 0) return;
+
+      let best = null;
+      Object.entries(bestByMode).forEach(([mode, info]) => {
+        if (mode === cur.mode) return;
+        if (info.wtw >= curI) return;
+        const potWTW = activity * info.wtw;
+        const savings = curWTW - potWTW;
+        const pct = (savings / curWTW) * 100;
+        if (savings > 0 && (!best || savings > best.savings)) {
+          best = { mode, ...info, potWTW, savings, pct };
+        }
+      });
+
+      if (best) {
+        results.push({
+          shipmentId: s.shipmentId,
+          tceId: tce.tceId,
+          mass: parseFloat(s.mass) || 0,
+          distance: parseFloat((tce.distance || {}).actual) || 0,
+          currentMode: cur.mode,
+          currentI: curI,
+          currentCO2e: curWTW,
+          altMode: best.mode,
+          altI: best.wtw,
+          altCO2e: best.potWTW,
+          savings: best.savings,
+          savingsPct: best.pct,
+        });
+      }
+    });
+  });
+  return results.sort((a, b) => b.savings - a.savings);
+}
+
+const opps = computeOpps();
+
+const oppEl = document.getElementById('opportunities');
+if (opps.length === 0) {
+  oppEl.innerHTML = `<div class="opp-empty">
+     No modal shift opportunities found — your routes already use the most efficient available modes.
+  </div>`;
+} else {
+  // Total potential savings
+  const totalSavings = opps.reduce((a, o) => a + o.savings, 0);
+  oppEl.innerHTML = `
+    <div style="background:var(--green-50); border:1px solid var(--green-200); border-radius:8px; padding:14px 16px; margin-bottom:18px; font-size:13px; color:#166534;">
+      <strong>${opps.length} opportunity${opps.length > 1 ? 'ies' : 'y'} identified</strong> — switching these transport legs to lower-emission modes could save up to
+      <strong>${fmtShort(totalSavings, 1)} kg CO₂e WTW</strong>
+      (${((totalSavings / totalWTW) * 100).toFixed(1)}% of total emissions).
+    </div>
+    ${opps.map((o, i) => `
+    <div class="opp-item">
+      <div class="opp-rank">
+        <span style="font-size:10px;">RANK</span>
+        <span class="rank-num">${i + 1}</span>
+      </div>
+      <div>
+        <div class="opp-title">${mi(o.currentMode)}  ${mi(o.altMode)} &nbsp;Modal shift: ${o.currentMode} to ${o.altMode}</div>
+        <div class="opp-sub">
+          Shipment <code>${o.shipmentId}</code> · TCE <code>${o.tceId}</code>
+          ${o.distance > 0 ? ` · ${o.distance.toLocaleString()} km` : ''}
+          · ${(o.mass / 1000).toFixed(1)} t payload
+        </div>
+        <div class="opp-pills">
+          ${badge(o.currentMode)}
+          <span class="opp-arrow"></span>
+          ${badge(o.altMode)}
+          <span class="opp-intensities">
+            ${fmt(o.currentI, 3)}  ${fmt(o.altI, 3)} kg CO₂e/t·km
+          </span>
+        </div>
+      </div>
+      <div class="opp-savings-box">
+        <div class="opp-savings-amt">−${fmtShort(o.savings, 1)} kg</div>
+        <div class="opp-savings-pct">${o.savingsPct.toFixed(1)}% less CO₂e</div>
+      </div>
+    </div>`).join('')}`;
+}
+
+// ── TOCs Table ─────────────────────────────────────────────────────────────────
+
+const maxI = Math.max(...tocs.map(t => parseFloat(t.co2eIntensityWTW) || 0), 0.001);
+
+document.getElementById('tocs-tbody').innerHTML = tocs.length === 0
+  ? `<tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:32px;">No TOCs</td></tr>`
+  : tocs.map(t => {
+    const wtw = parseFloat(t.co2eIntensityWTW) || 0;
+    const pct = Math.min((wtw / maxI) * 100, 100).toFixed(1);
+    const carriers = (t.energyCarriers || []).map(ec =>
+      `${ec.energyCarrier}${ec.feedstocks && ec.feedstocks[0] ? ' ('+ec.feedstocks[0].feedstock+')' : ''}`
+    ).join(', ');
+    return `<tr>
+      <td><code>${t.tocId}</code></td>
+      <td>${badge(t.mode)}</td>
+      <td>
+        <div class="intensity-cell">
+          <span>${fmt(wtw, 3)}</span>
+          <div class="intensity-bar">
+            <div class="${ibarClass(wtw, maxI)}" style="width:${pct}%"></div>
+          </div>
+        </div>
+      </td>
+      <td>${fmt(t.co2eIntensityTTW, 3)}</td>
+      <td>${((parseFloat(t.loadFactor) || 0) * 100).toFixed(0)}%</td>
+      <td style="font-size:12px;">${t.truckLoadingSequence || '—'}</td>
+      <td style="font-size:12px; color:var(--gray-500);">${carriers || '—'}</td>
+      <td>${badge(t.status)}</td>
+    </tr>`;
+  }).join('');
+
+// ── Shipments Table ────────────────────────────────────────────────────────────
+
+document.getElementById('shipments-tbody').innerHTML = enriched.length === 0
+  ? `<tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:32px;">No shipments</td></tr>`
+  : enriched.flatMap((s, idx) => {
+    const rowId = `tce-${idx}`;
+    const tces = s.tces || [];
+    const periodStart = (s.referencePeriodStart || '').slice(0, 10);
+    const periodEnd   = (s.referencePeriodEnd   || '').slice(0, 10);
+
+    const tceRows = tces.map(tce => {
+      const cur = tce.tocId ? tocMap[tce.tocId] : null;
+      const legType = tce.tocId
+        ? `${badge(cur ? cur.mode : '?')} <code style="font-size:10px;">${tce.tocId}</code>`
+        : (tce.hocId ? `<span class="badge" style="background:#f1f5f9;color:#64748b;">Hub</span> <code style="font-size:10px;">${tce.hocId}</code>` : '—');
+      const dist = (tce.distance || {}).actual || '—';
+      return `<div class="tce-grid">
+        <div><span class="tce-lbl">TCE ID</span><br><span class="tce-val" style="font-size:10px;">${tce.tceId}</span></div>
+        <div><span class="tce-lbl">Leg</span><br>${legType}</div>
+        <div><span class="tce-lbl">CO₂e WTW</span><br><span class="tce-val">${fmt(tce.co2eWTW)} kg</span></div>
+        <div><span class="tce-lbl">CO₂e TTW</span><br><span class="tce-val">${fmt(tce.co2eTTW)} kg</span></div>
+        <div><span class="tce-lbl">Distance</span><br><span class="tce-val">${dist} km</span></div>
+      </div>`;
+    }).join('');
+
+    return [
+      `<tr class="main-row">
+        <td><code>${s.shipmentId}</code></td>
+        <td style="font-size:12px;">${s.companyName || '—'}</td>
+        <td>${(parseFloat(s.mass) || 0).toLocaleString()}</td>
+        <td><strong>${fmt(s.co2eWTW)} kg</strong></td>
+        <td style="color:var(--gray-500);">${fmt(s.co2eTTW)} kg</td>
+        <td style="color:var(--gray-500);">${tces.length}</td>
+        <td style="font-size:12px; color:var(--gray-500); white-space:nowrap;">${periodStart}<br>${periodEnd}</td>
+        <td>${badge(s.status)}</td>
+      </tr>`,
+      tceRows ? `<tr><td colspan="8" class="tce-expand">${tceRows}</td></tr>` : '',
+    ];
+  }).join('');
+</script>
+</body>
+</html>

@@ -33,6 +33,8 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap/SKILL.md` (the
 | D8 | `SKILL.md` | `auth login` idempotent silent-success on a cached token (`auth.rs:107-110`) is not surfaced; compounds D1 confusion | LOW | Open |
 | D9 | skill layout | `.claude/skills/ileap/SKILL.md` is a symlink to `.agents/...`; tools that don't follow symlinks miss it (informational) | LOW | Open |
 | D10 | `SKILL.md` | PACT `footprints` honours only the **first** `-f` filter; extra `-f` flags are silently dropped at runtime (only `--dry-run` reveals it). The repeatable-`-f` docs don't note this limitation | MED | Open |
+| D11 | `ileap-dashboard.html` | Root demo dashboard uses the wrong term "Transport Operation **Characteristics**" (should be **Categories**) and contains emojis — violating SKILL.md terminology and the dashboard no-emoji policy. The site ships a sanitized copy; the source is still wrong | MED | Deferred→ADR-0010 |
+| D12 | `site/` (microsite) | The site's truth-sensitive strings (skill name, `ileap-skill.zip` name, demo URL, example prompts) must track the skill or they will drift — first risk is the `ileap-cli`→`ileap` rename | MED | Deferred→ADR-0010 |
 
 ---
 
@@ -106,6 +108,27 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap/SKILL.md` (the
   `adr/README.md`. Fix the doc to match whatever C3 decides — if C3 chooses
   "error on multiple `-f`", document that instead of the silent-drop behaviour.
 
+### D11 — `ileap-dashboard.html` uses wrong terminology + emojis (MED, Deferred→ADR-0010)
+- **Artifact:** `ileap-dashboard.html` (repo root) — a demo dashboard.
+- **Reality:** contains "Transport Operation **Characteristics** (TOCs)" (should be
+  **Categories** — the exact mistake `SKILL.md` warns against) and emoji glyphs
+  (📊 🌱 ✅), which the SKILL.md dashboard styling policy forbids. *(Verified
+  2026-06-16: `grep` for "Characteristics" and the emoji set both hit.)*
+- **Mitigation in place:** the microsite ships a **sanitized** copy at
+  `site/static/demos/dashboard.html` (terms fixed, emojis stripped, verified clean).
+- **Fix:** correct or regenerate the *source* `ileap-dashboard.html`. Tracked as an
+  open item in ADR-0010; do not let the bad source propagate to new copies.
+
+### D12 — microsite truth-sensitive strings must track the skill (MED, Deferred→ADR-0010)
+- **Artifact:** `site/` (the iLEAP skill microsite, ADR-0010).
+- **Risk:** the site hard-references the skill name, the `ileap-skill.zip` download,
+  the demo URL (`api.preview.ileap.dev`), and example prompts. These drift if the
+  skill changes — the **first** instance being the `ileap-cli`→`ileap` rename
+  (download name, all copy). The site is built to use `ileap` already.
+- **Fix:** when the rename or any skill change lands, re-verify these strings.
+  `grep -rn "ileap-cli" site/` must stay empty; the download must resolve to the
+  current release asset. Owned by ADR-0010.
+
 ---
 
 ## Checked — no drift (recorded so they aren't re-investigated)
@@ -124,4 +147,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap/SKILL.md` (the
 ## Unverifiable from source
 
 - Demo-server credentials (`hello` / `pathfinder`) and the demo URL's liveness
-  depend on live server state, not the codebase. Confirm out-of-band.
+  depend on live server state, not the codebase. **Confirmed live 2026-06-16:**
+  login to `https://api.preview.ileap.dev` with `hello`/`pathfinder` succeeded and
+  all six resources fetched (exit 0). Re-confirm out-of-band over time — server
+  state can change.
