@@ -1,7 +1,7 @@
 # Zola configuration for the iLEAP skill microsite (see docs/adr/0010).
 # TODO(ADR-0010 open item): set base_url to the chosen *.ileap.global subdomain
 # before launch.
-base_url = "https://skill.ileap.dev"
+base_url = "https://skill-preview.ileap.dev"
 title = "iLEAP Skill for Claude"
 description = "Query and visualize iLEAP transport-emissions data in Claude, in plain language."
 
