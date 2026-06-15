@@ -124,6 +124,34 @@ fn no_auth_pretty_error_is_also_structured_json() {
 }
 
 #[test]
+fn auth_login_username_only_non_tty_reports_missing_password() {
+    // ADR-0009 §3: `auth login --username alice` with non-TTY stdin must fail
+    // citing the missing *password* only — the provided username is honored,
+    // not re-prompted or re-reported.
+    let output = ileap()
+        .args([
+            "--base-url",
+            "http://login-user-only-test.invalid",
+            "--username",
+            "alice",
+            "auth",
+            "login",
+        ])
+        .env_remove("ILEAP_TOKEN")
+        .env_remove("ILEAP_PASSWORD")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // The error must point at the *password* as the missing piece — the
+    // provided username is acknowledged as present, never demanded again.
+    assert!(
+        stderr.contains("--password is missing"),
+        "expected a missing-password hint, got: {stderr}"
+    );
+}
+
+#[test]
 fn username_without_password_exits_4() {
     ileap()
         .args([
@@ -232,7 +260,6 @@ async fn auto_mode_merges_pages() {
             "list",
             "--limit",
             "2",
-            "--yes",
         ])
         .output()
         .unwrap();
@@ -248,6 +275,30 @@ async fn auto_mode_merges_pages() {
     assert_eq!(items[0]["id"], "a");
     assert_eq!(items[1]["id"], "b");
     assert_eq!(items[2]["id"], "c");
+}
+
+#[test]
+fn limit_zero_is_rejected_at_parse_time() {
+    // --limit 0 would never terminate pagination; clap must reject it (exit 2)
+    let output = ileap()
+        .args([
+            "--token",
+            "tok",
+            "--base-url",
+            "http://limit-zero-test.invalid",
+            "shipments",
+            "list",
+            "--limit",
+            "0",
+        ])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(2));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("1..") || stderr.to_lowercase().contains("invalid value"),
+        "expected a range/invalid-value error, got: {stderr}"
+    );
 }
 
 #[tokio::test]
@@ -275,7 +326,6 @@ async fn max_pages_caps_pagination() {
             "list",
             "--limit",
             "2",
-            "--yes",
             "--max-pages",
             "1",
         ])

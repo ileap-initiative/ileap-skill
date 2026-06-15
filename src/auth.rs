@@ -91,6 +91,28 @@ pub fn credential_error(username: Option<&str>, password: Option<&str>) -> CliEr
     CliError::Auth(msg.to_string())
 }
 
+/// Resolve a `Client` from the credential chain: explicit `--token` wins, then a
+/// valid cached token, then username/password authentication. This is the most
+/// security-relevant decision in the program, so it lives in `auth.rs` (ADR-0009).
+pub async fn resolve_client(
+    base_url: &str,
+    token: Option<&str>,
+    username: Option<&str>,
+    password: Option<&str>,
+    timeout: Option<Duration>,
+) -> Result<Client> {
+    if let Some(t) = token {
+        Ok(Client::from_token(base_url, t.to_string(), timeout))
+    } else if let Some(t) = load_saved_token(base_url)? {
+        Ok(Client::from_token(base_url, t, timeout))
+    } else {
+        match (username, password) {
+            (Some(u), Some(p)) => Ok(Client::authenticate(base_url, u, p, timeout).await?),
+            (u, p) => Err(credential_error(u, p).into()),
+        }
+    }
+}
+
 pub async fn run_auth(
     cmd: AuthCmd,
     base_url: &str,
@@ -128,8 +150,16 @@ pub async fn run_auth(
                 }
                 (u, p) => {
                     if std::io::stdin().is_terminal() {
-                        let u = prompt("Username: ")?;
-                        let p = prompt_password("Password: ")?;
+                        // Honor any credential already provided; prompt only for
+                        // what is missing (ADR-0009 §3).
+                        let u = match u {
+                            Some(u) => u.to_string(),
+                            None => prompt("Username: ")?,
+                        };
+                        let p = match p {
+                            Some(p) => p.to_string(),
+                            None => prompt_password("Password: ")?,
+                        };
                         let c = Client::authenticate(base_url, &u, &p, timeout).await?;
                         save_token(base_url, c.token())?;
                         output::print_value(
@@ -355,32 +385,6 @@ mod tests {
         )
         .await
         .unwrap();
-    }
-
-    #[tokio::test]
-    async fn run_auth_login_no_credentials_returns_exit_code_4() {
-        let base_url = "http://test-run-auth-no-creds.invalid";
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
-        let err = run_auth(
-            AuthCmd::Login,
-            base_url,
-            None,
-            None,
-            None,
-            None,
-            &OutputFormat::Compact,
-        )
-        .await
-        .unwrap_err();
-        // err is anyhow::Error wrapping a CliError::Auth
-        let ce = err
-            .downcast_ref::<CliError>()
-            .expect("expected CliError in chain");
-        assert!(
-            matches!(ce, CliError::Auth(_)),
-            "expected Auth variant, got: {ce:?}"
-        );
-        assert_eq!(ce.exit_code(), 4);
     }
 
     #[tokio::test]

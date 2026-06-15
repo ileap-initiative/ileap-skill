@@ -112,13 +112,15 @@ pub enum FootprintsCmd {
 
 #[derive(Args, Clone, Debug, Default)]
 pub struct ListArgs {
-    /// Maximum number of results
-    #[arg(long, short = 'l')]
+    /// Maximum number of results (page size; must be at least 1)
+    #[arg(long, short = 'l', value_parser = clap::value_parser!(u32).range(1..))]
     pub limit: Option<u32>,
 
-    /// Filter expression (repeatable).
+    /// Filter expression (repeatable for iLEAP standalone endpoints).
     ///
-    /// PACT-based endpoints use OData syntax: -f "created lt '2024-01-01T00:00:00Z'"
+    /// PACT-based endpoints (footprints) use OData syntax and accept at most
+    /// one -f; combine conditions in a single expression with `and`:
+    /// -f "created lt '2024-01-01T00:00:00Z' and status eq 'active'"
     ///
     /// iLEAP standalone endpoints use key=value pairs: -f mode=road
     /// To retrieve a single resource by ID: -f id=abc-123
@@ -130,10 +132,6 @@ pub struct ListArgs {
     /// Print the request that would be sent without executing it
     #[arg(long, short = 'n')]
     pub dry_run: bool,
-
-    /// Automatically page through all results without prompting
-    #[arg(long, short = 'y')]
-    pub yes: bool,
 
     /// Maximum number of pages to fetch when paginating
     #[arg(long, short = 'm')]

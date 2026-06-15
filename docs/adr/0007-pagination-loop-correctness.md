@@ -2,8 +2,11 @@
 
 ## Status
 
-Proposed (2026-06-11). Absorbs backlog candidate **C5** (`merge_pages` clones).
-Respects ADR-0004 (Accepted): the generic `run_list` bound stays.
+Proposed (2026-06-11) — **implemented** in
+[PR #14](https://github.com/sine-fdn/ileap-cli/pull/14)
+(branch `adr-0007-pagination-loop-correctness`). Absorbs backlog candidate
+**C5** (`merge_pages` clones). Respects ADR-0004 (Accepted): the generic
+`run_list` bound stays. See **Implementation** at the end of this document.
 
 ## Context
 
@@ -146,3 +149,33 @@ cargo build && cargo clippy --all-targets -- -D warnings && cargo test
 Manually: `ileap shipments list -l 0 -y` exits immediately with a usage error;
 `-l 2 -y -m 3` fetches at most 3 pages (confirm via `--dry-run`/server logs or
 wiremock test).
+
+## Implementation
+
+Implemented on branch `adr-0007-pagination-loop-correctness`
+([PR #14](https://github.com/sine-fdn/ileap-cli/pull/14), 2026-06-11), based on
+`main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
+-- -D warnings` clean; `cargo test` pass (**33 unit + 11 integration, 0
+failed**) — including, unchanged, the ADR-0004 pagination unit tests
+(`run_list_tests`) and the `auto_mode_merges_pages` / `max_pages_caps_pagination`
+integration tests that pin behaviour.
+
+**Files:** `src/cli.rs` (§1), `src/commands.rs` (§2, §3),
+`tests/integration.rs` (§4).
+
+**Deviations from the Changes text:**
+- **§2 sketch refined:** the unified loop computes `full_page` *before* the
+  interactive/non-interactive branch (the sketch computed it inside the
+  non-interactive arm; the interactive arm needs it too once ADR-0009 moves
+  the prompt here, and `value` is moved by `pages.push`). The `limit = None`
+  break is checked after `!more || at_max`, exactly preserving the original
+  single-fetch semantics — the in-file unit tests are the oracle, as planned.
+- **§3 as specified** (`is_object` from `pages.first()`); the new
+  `merge_pages_mixed_shapes_first_page_wins` test pins both directions
+  (object-first and array-first).
+- **§4:** implemented as an integration test (exit 2, stderr names the valid
+  range) rather than a unit test — clap's behaviour is only observable
+  end-to-end.
+
+**New tests:** `limit_zero_is_rejected_at_parse_time` (integration),
+`merge_pages_mixed_shapes_first_page_wins` (unit).

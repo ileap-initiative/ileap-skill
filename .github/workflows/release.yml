@@ -6,9 +6,9 @@ name: Release skill bundle
 # scripts/package-skill.sh, and attaches the resulting skill zip to a GitHub
 # release when a tag is pushed.
 #
-# Note: reqwest currently uses native-tls, so the musl builds statically link
-# OpenSSL (hence the alpine container + openssl-libs-static). Switching
-# reqwest to rustls-tls would simplify this.
+# reqwest is configured for rustls-tls (ring), so there is no OpenSSL to link
+# and the static musl binaries build on plain Ubuntu runners without an Alpine
+# container.
 on:
   push:
     tags: ["v*"]
@@ -23,19 +23,26 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
             artifact: ileap-Linux-x86_64
           - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
             artifact: ileap-Linux-aarch64
     runs-on: ${{ matrix.os }}
-    container: rust:alpine
+    # Build static musl binaries on plain Ubuntu runners (no Alpine container):
+    # JavaScript actions like checkout/upload-artifact cannot run inside Alpine
+    # containers on arm64 runners. With rustls (ring) there is no OpenSSL to
+    # statically link, so musl-tools + the rustup musl target is all we need;
+    # CC=musl-gcc points ring's C build at the musl toolchain.
     env:
-      OPENSSL_STATIC: "1"
+      CC: musl-gcc
     steps:
-      - run: apk add -q musl-dev git pkgconfig openssl-dev openssl-libs-static tar
-      - uses: actions/checkout@v4
-      - run: cargo build --release --locked
-      - run: cp target/release/ileap ${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - run: cp target/${{ matrix.target }}/release/ileap ${{ matrix.artifact }}
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
@@ -43,10 +50,10 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cargo build --release --locked
       - run: cp target/release/ileap ileap-Darwin-arm64
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ileap-Darwin-arm64
           path: ileap-Darwin-arm64
@@ -55,11 +62,11 @@ jobs:
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # Download the per-arch binaries straight into the skill's bin/ dir.
       # Each artifact contains a single ileap-<OS>-<ARCH> file named to match
       # what SKILL.md looks up at runtime, so merge-multiple lands them in place.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           merge-multiple: true
           path: .agents/skills/ileap/bin
@@ -67,6 +74,6 @@ jobs:
       # bundled binaries are runnable straight out of the zip.
       - run: chmod +x .agents/skills/ileap/bin/ileap-*
       - run: scripts/package-skill.sh
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: dist/ileap-skill.zip
