@@ -25,7 +25,7 @@ and never re-states a fix; this index owns the decisions.
 | [0006](0006-token-cache-hardening.md) | Token cache hardening | **Proposed** | Accept plaintext storage (resolves C4) but: scheme-aware cache filename, `0600` on Unix, error instead of CWD fallback |
 | [0007](0007-pagination-loop-correctness.md) | Pagination loop — correctness and shape | **Proposed** | Reject `--limit 0` at clap; unify the two `run_list` loops; `merge_pages` envelope from first page (absorbs C5) |
 | [0008](0008-pact-filter-semantics.md) | PACT `$filter` — error on multiple `-f` | **Proposed** | Error when >1 `-f` for `footprints`; signature `&[String]` → `Option<&str>`; help-text fix (resolves C3) |
-| [0009](0009-straighten-dispatch-and-interactive-flow.md) | Straighten command dispatch and interactive flow | **Proposed** | Credential chain `main.rs` → `auth::resolve_client`; `run_cmd` dispatches Auth too (no `unreachable!`); `auth login` prompts only for missing credentials; next-page prompt moves out of `pager.rs` |
+| [0009](0009-straighten-dispatch-and-interactive-flow.md) | Straighten command dispatch and interactive flow | **Proposed** (implemented) | Credential chain `main.rs` → `auth::resolve_client`; `run_cmd` dispatches Auth too (no `unreachable!`); `auth login` prompts only for missing credentials; `pager.rs` dissolved into `commands.rs` (the next-page prompt was already gone — ADR-0007 removed interactive paging) |
 
 **Implementation order** (0001+0002 accepted as baseline): **0004 → 0005**
 (0003 is **Rejected**). 0004 generalizes `run_list`'s error bound; 0005's typed

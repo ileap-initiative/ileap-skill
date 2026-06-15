@@ -124,6 +124,34 @@ fn no_auth_pretty_error_is_also_structured_json() {
 }
 
 #[test]
+fn auth_login_username_only_non_tty_reports_missing_password() {
+    // ADR-0009 §3: `auth login --username alice` with non-TTY stdin must fail
+    // citing the missing *password* only — the provided username is honored,
+    // not re-prompted or re-reported.
+    let output = ileap()
+        .args([
+            "--base-url",
+            "http://login-user-only-test.invalid",
+            "--username",
+            "alice",
+            "auth",
+            "login",
+        ])
+        .env_remove("ILEAP_TOKEN")
+        .env_remove("ILEAP_PASSWORD")
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(4));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    // The error must point at the *password* as the missing piece — the
+    // provided username is acknowledged as present, never demanded again.
+    assert!(
+        stderr.contains("--password is missing"),
+        "expected a missing-password hint, got: {stderr}"
+    );
+}
+
+#[test]
 fn username_without_password_exits_4() {
     ileap()
         .args([

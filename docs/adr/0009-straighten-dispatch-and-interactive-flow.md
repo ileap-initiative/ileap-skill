@@ -2,7 +2,9 @@
 
 ## Status
 
-Proposed (2026-06-11). Bundles four review findings that share one theme:
+Proposed (2026-06-11) — **implemented** (2026-06-15, branch
+`adr-0009-straighten-dispatch-and-interactive-flow`). See **Implementation** at
+the end of this document. Bundles four review findings that share one theme:
 **any single user action should read top-to-bottom in one place** (the
 project's "almost naive" style goal). Respects ADR-0003 (Rejected — the 5×
 resource dispatch arms stay) and ADR-0004/0005 (Accepted — generic `run_list`
@@ -142,3 +144,51 @@ cargo build && cargo clippy --all-targets -- -D warnings && cargo test
 Manually: `ileap auth login --username alice` (TTY) prompts only
 `Password:`; `ileap shipments list -l 2` pages interactively as before;
 `grep -rn "unreachable!" src/` is empty.
+
+## Implementation
+
+Implemented on branch `adr-0009-straighten-dispatch-and-interactive-flow`
+(2026-06-15), based on `main` at `3c46d08`. Verified: `cargo build` pass;
+`cargo clippy --all-targets -- -D warnings` clean; `cargo test` pass
+(**36 unit + 12 integration, 0 failed**), with the prior behavioral oracles
+(exit codes 0/2/4, JSON shapes, `auto_mode_merges_pages`,
+`max_pages_caps_pagination`) passing unchanged.
+
+**Files:** `src/auth.rs` (§1, §3), `src/commands.rs` (§2, §4), `src/main.rs`
+(§3 of Changes), `tests/integration.rs` (§5); `src/pager.rs` deleted (§4).
+
+**Material deviation — §4 was already done by ADR-0007.** This ADR was written
+against a `pager.rs` that still held the `print_page` "Next page? [y/N]"
+prompt. By the time ADR-0007 actually merged ([PR #14], plus commit `c81b7af`
+"remove superfluous `yes` command line arg"), interactive paging had been
+removed entirely: `run_list` now auto-paginates with no prompt, and `pager.rs`
+held only `item_count`. So there was **no prompt to relocate**. §4 reduced to
+its fallback clause: `item_count` (+ its tests) moved into `commands.rs` and the
+`pager.rs` module was deleted, with `mod pager;` dropped from `main.rs`. No
+`prompt("Next page? …")` call was added anywhere — doing so would have
+*re-introduced* the interactivity ADR-0007 deliberately removed.
+
+**Other deviations:**
+- **§2 — single match, no second function.** `run_cmd(cli: Cli)` matches
+  `cli.command` once: `None` prints help, `Auth` calls `run_auth`, and each of
+  the six resource arms opens with `let client = auth::resolve_client(...)`.
+  This is the literal "non-auth arms call `resolve_client`" design; it keeps the
+  ADR-0003 five-arm dispatch intact and needs no `unreachable!` (the only one
+  left in `src/` is the legitimate `(Some, Some)` guard inside
+  `credential_error`). The duplicated one-line resolve-call per arm is the
+  accepted cost of not splitting `Command` (Considered Options).
+- **`resolve_client` takes `Option<&str>`, not owned values,** so the six arms
+  can each call it without moving `cli`'s fields — and it matches `run_auth`'s
+  existing signature shape.
+- **§5 test assertion.** The piped-stdin test asserts stderr contains
+  `"--password is missing"`. The original draft's stricter "must not mention
+  `--username`" was dropped as incorrect: `credential_error(Some, None)`
+  deliberately names the username as *present* to explain that the **password**
+  is what's missing ("--username provided but --password is missing"). The
+  no-re-prompt guarantee for the username is TTY-only and not observable through
+  a piped harness; it is covered by the prompt-fill `match` logic in §3.
+
+**New test:** `auth_login_username_only_non_tty_reports_missing_password`
+(integration).
+
+[PR #14]: https://github.com/sine-fdn/ileap-cli/pull/14
