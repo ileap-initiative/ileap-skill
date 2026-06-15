@@ -11,20 +11,22 @@ description: >-
   "show ileap", "fetch ileap", "list shipments", "list footprints", "query iLEAP", "ileap
   summary", "show tocs", "show hocs", "show tad", "show aed", "build a dashboard", "create a
   dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
-allowed-tools: Bash, Read, Write, ileap, cargo
+allowed-tools: Bash, Read, Write
 ---
 
 # iLEAP CLI Skill
 
 ## Step 0 — Read schemas before doing anything else
 
-**Read `.agents/skills/ileap-cli/SCHEMAS.md` now, before reading further or taking any action.**
+**Read `SCHEMAS.md` — located in the same directory as this SKILL.md — now, before reading further or taking any action.**
 
 It contains the authoritative terminology definitions and field schemas for all iLEAP resources. Without it you will make mistakes — for example, TOC stands for Transport Operation **Category** (not Characteristics), and field names differ from what general knowledge would suggest.
 
-If the file does not exist at that path, stop and inform the user: "SCHEMAS.md is missing from `.agents/skills/ileap-cli/`. Cannot proceed safely without authoritative field definitions. Please restore this file from the repository." Do not attempt to infer field names from general knowledge.
+Throughout this document, "the skill directory" means the directory containing this SKILL.md file.
 
-If the file exists but cannot be read or is empty, stop and inform the user: "SCHEMAS.md at `.agents/skills/ileap-cli/` is unreadable or empty. Cannot proceed safely. Please restore this file from the repository."
+If `SCHEMAS.md` does not exist in the skill directory, stop and inform the user: "SCHEMAS.md is missing from the skill directory. Cannot proceed safely without authoritative field definitions. Please reinstall the skill." Do not attempt to infer field names from general knowledge.
+
+If the file exists but cannot be read or is empty, stop and inform the user: "SCHEMAS.md in the skill directory is unreadable or empty. Cannot proceed safely. Please reinstall the skill."
 
 ## DO NOT
 
@@ -36,37 +38,31 @@ If the file exists but cannot be read or is empty, stop and inform the user: "SC
 
 ## Prerequisites
 
-Verify the CLI is installed before proceeding:
+This skill uses **prebuilt `ileap` binaries only** — never compile the CLI at runtime (no `cargo install`, no `cargo run`, no `cargo build`). The binaries are built from the ileap-cli repository and shipped inside the skill bundle, so the skill works in any environment, including sandboxed ones (e.g. Claude.ai) without a Rust toolchain. Obtain a working binary by trying these steps **in order** — stop at the first one that succeeds:
+
+**Step 1 — Already on PATH?**
 
 ```bash
 which ileap || echo "not installed"
 ```
 
-If missing, install it from the local repo:
+If found, use it and skip the rest of this section.
+
+**Step 2 — Bundled binary.** The skill directory contains prebuilt binaries at `bin/ileap-<OS>-<ARCH>` (e.g. `bin/ileap-Linux-x86_64`, `bin/ileap-Linux-aarch64`, `bin/ileap-Darwin-arm64`). Use the one matching the current platform:
 
 ```bash
-cargo install --path .
+SKILL_DIR=<absolute path of the directory containing this SKILL.md>
+CANDIDATE="$SKILL_DIR/bin/ileap-$(uname -s)-$(uname -m)"
+if [ -f "$CANDIDATE" ]; then
+  mkdir -p /tmp/ileap-bin && cp "$CANDIDATE" /tmp/ileap-bin/ileap && chmod +x /tmp/ileap-bin/ileap
+  export PATH="/tmp/ileap-bin:$PATH"
+  ileap --version
+fi
 ```
 
-After installation, verify the binary is reachable:
+If `ileap --version` succeeds, use it and skip the rest of this section. Remember to prepend `/tmp/ileap-bin` to PATH (or use the absolute path `/tmp/ileap-bin/ileap`) in every subsequent shell invocation, since environment changes do not persist between commands.
 
-```bash
-which ileap || export PATH="$HOME/.cargo/bin:$PATH"
-```
-
-If `ileap` is still not found after updating PATH, report the full PATH to the user and stop.
-
-Requires Rust. If `cargo` is not available, install it first:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-**Always use the `ileap` binary** — never fall back to `cargo run --`. Installing first ensures all subsequent commands match the `Bash(ileap *)` permission rule and run without prompts.
-
-If `cargo install --path .` exits with a non-zero code, report the error message to the user and stop — do not attempt to fetch data or generate a dashboard without a working CLI binary.
-
-If the error output contains "could not find Cargo.toml", additionally inform the user: "Run this command from the repository root where Cargo.toml is located."
+**Step 3 — No binary available.** Report to the user which platform was detected (`uname -s` / `uname -m`) and which binaries exist in the skill's `bin/` directory, then stop — do not attempt to fetch data or generate a dashboard without a working CLI binary, and do not compile one. Inform the user: "The skill bundle has no `ileap` binary for this platform. Rebuild the bundle from the ileap-cli repository using `scripts/build-skill-binaries.sh` and `scripts/package-skill.sh`."
 
 ## Overview
 
@@ -266,7 +262,7 @@ On non-zero exit, read `cli_error.type` from stderr:
 - `not_found` → endpoint not supported on this server; mark as unavailable in the dashboard
 - `error` → show the message in the dashboard card
 
-**Useful jq snippets** once you have the JSON response:
+**Useful jq snippets** once you have the JSON response (if `jq` is unavailable in the environment, use `python3 -c` with the `json` module instead):
 
 ```bash
 # Count records
@@ -291,10 +287,11 @@ If `date -u` returns a non-zero exit code, use the literal fallback filename `/t
 
 Use this value in the filename (e.g. `/tmp/ileap-dashboard-20240315-142300.html`). Do not write a file named literally `ileap-dashboard-YYYYMMDD-HHMMSS.html`.
 
-**Step 3b — Write and open:** Before writing HTML, resolve the logo path explicitly:
+**Step 3b — Write and open:** Before writing HTML, resolve the logo from the skill directory and encode it as a base64 data URI so the HTML is self-contained (it must render correctly even when downloaded to another machine — never reference the logo by filesystem path):
 
 ```bash
-ls "$(git rev-parse --show-toplevel)/ileap-logo.png" 2>/dev/null && echo "LOGO_PATH=$(git rev-parse --show-toplevel)/ileap-logo.png" || echo 'LOGO_PATH='
+SKILL_DIR=<absolute path of the directory containing this SKILL.md>
+if [ -f "$SKILL_DIR/ileap-logo.png" ]; then base64 < "$SKILL_DIR/ileap-logo.png" | tr -d '\n' > /tmp/ileap-logo-b64.txt; echo "logo available"; else echo "no logo"; fi
 ```
 
 Then write the HTML using the **Write tool**, then open the file:
@@ -305,7 +302,10 @@ Write tool → /tmp/ileap-dashboard-$TS.html
 
 If the Write tool returns an error, report the error to the user and provide the full HTML content as a code block in the chat instead of attempting to open a file.
 
-To open the file after writing, detect the OS first and use the appropriate command:
+How to deliver the file depends on the environment:
+
+- **Sandboxed/headless environment (e.g. Claude.ai, remote sessions, CI):** there is no browser to open. Provide the HTML file to the user as a downloadable output file, and state its absolute path. Do not attempt `open`/`xdg-open`.
+- **Local desktop environment:** open the file with the OS-appropriate command:
 
 ```bash
 os=$(uname -s)
@@ -315,13 +315,11 @@ else start /tmp/ileap-dashboard-$TS.html
 fi
 ```
 
-If the open command fails, print the absolute file path to the user so they can open it manually.
-
-`Write(/tmp/*)` is in the project allow list so this requires no permission prompt.
+If the open command fails, fall back to the headless behavior: provide the file and print the absolute path so the user can open it manually.
 
 **Before calling the Write tool, confirm each of the following 7 items is present in the HTML you are about to write:**
 
-1. **Header** — iLEAP logo and metadata: If `ileap-logo.png` exists at the repo root, include it as `<img src="file:///absolute/path/to/ileap-logo.png">` so the image resolves from `/tmp`; if the file does not exist, omit the `<img>` element entirely and render the text "iLEAP" as a plain `<h1>` instead. Include the base URL and generation timestamp alongside the logo/heading.
+1. **Header** — iLEAP logo and metadata: If `ileap-logo.png` exists in the skill directory (see Step 3b), embed it inline as `<img src="data:image/png;base64,<contents of /tmp/ileap-logo-b64.txt>">` so the HTML is fully self-contained and renders on any machine; if the logo is unavailable, omit the `<img>` element entirely and render the text "iLEAP" as a plain `<h1>` instead. Include the base URL and generation timestamp alongside the logo/heading.
 2. **Auth status badge** — shows whether the session is authenticated.
 3. **Summary cards** — one card per resource type showing the total record count, or an error message if the fetch failed.
 4. **Expanded record cards** — one card per record showing all mandatory fields (see table below); if a mandatory field is absent from a record, show it explicitly as `—`. Plus any additional top-level scalar or object fields present in the record, rendered as a key-value table; nested arrays (e.g. TCEs inside a shipment) should each be rendered as a sub-table.
