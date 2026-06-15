@@ -51,7 +51,7 @@ returns `credential_error` (`src/auth.rs:111-121`). The only place the tool ever
 prompts for `Username:`/`Password:` is the REPL entry arm
 (`src/main.rs:68-69, 77-78`). Removing the REPL therefore removes interactive
 credential entry from the product unless we add it back elsewhere. (Note: the
-`ileap-cli` skill doc claims "To authenticate interactively: `ileap auth login`"
+`ileap` skill doc claims "To authenticate interactively: `ileap auth login`"
 — that is inaccurate against the current code.)
 
 **Inference — why the REPL exists.** Discovery and onboarding: the menu
@@ -154,7 +154,7 @@ for ad-hoc human use.
    exactly as the existing `(Some(u), Some(p))` branch does. When stdin is not a
    TTY, retain the `credential_error` path (so scripts still fail fast rather
    than hang). Keep `tty::prompt_password` in `src/tty.rs`.
-6. **Docs:** update the `ileap-cli` skill doc and README so the interactive auth
+6. **Docs:** update the `ileap` skill doc and README so the interactive auth
    entry point is `ileap auth login` (now accurate), not bare `ileap`.
 7. **Verify** with `cargo build`, `cargo clippy` (catches unused imports), and
    `cargo test`. No existing test asserts the old no-command behaviour, so none

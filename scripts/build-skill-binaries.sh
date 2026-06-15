@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Build prebuilt `ileap` binaries for the ileap-cli skill bundle from the
-# LOCAL repository source, and place them in .agents/skills/ileap-cli/bin/.
+# Build prebuilt `ileap` binaries for the ileap skill bundle from the
+# LOCAL repository source, and place them in .agents/skills/ileap/bin/.
 #
 # The skill uses prebuilt binaries exclusively (no Rust toolchain at runtime),
 # so this must be run before packaging the skill with scripts/package-skill.sh.
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN_DIR="$REPO_ROOT/.agents/skills/ileap-cli/bin"
+BIN_DIR="$REPO_ROOT/.agents/skills/ileap/bin"
 mkdir -p "$BIN_DIR"
 
 build_linux() {
