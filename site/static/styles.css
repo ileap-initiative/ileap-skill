@@ -21,6 +21,8 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-ser
 
 .preview-banner { background:var(--ink); color:#fff; text-align:center;
   font-size:13px; font-weight:600; padding:7px 12px; }
+.preview-banner a { color:#fff; text-decoration:underline; }
+.preview-banner a:hover { color:#dceefa; }
 
 .topbar { background:var(--white); border-bottom:1px solid var(--line); padding:16px 0; }
 .topbar .logo { height:38px; width:auto; display:block; }
