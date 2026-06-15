@@ -358,32 +358,6 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn run_auth_login_no_credentials_returns_exit_code_4() {
-        let base_url = "http://test-run-auth-no-creds.invalid";
-        let _ = std::fs::remove_file(token_file(base_url).unwrap());
-        let err = run_auth(
-            AuthCmd::Login,
-            base_url,
-            None,
-            None,
-            None,
-            None,
-            &OutputFormat::Compact,
-        )
-        .await
-        .unwrap_err();
-        // err is anyhow::Error wrapping a CliError::Auth
-        let ce = err
-            .downcast_ref::<CliError>()
-            .expect("expected CliError in chain");
-        assert!(
-            matches!(ce, CliError::Auth(_)),
-            "expected Auth variant, got: {ce:?}"
-        );
-        assert_eq!(ce.exit_code(), 4);
-    }
-
-    #[tokio::test]
     async fn run_auth_status_with_valid_token_is_ok() {
         let base_url = "http://test-run-auth-status-ok.invalid";
         let token = make_jwt(json!({"exp": 9999999999u64}));

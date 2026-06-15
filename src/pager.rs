@@ -1,9 +1,4 @@
-use anyhow::Result;
 use serde_json::Value;
-
-use crate::cli::OutputFormat;
-use crate::output;
-use crate::prompt::prompt;
 
 pub fn item_count(value: &Value) -> usize {
     match value {
@@ -14,17 +9,6 @@ pub fn item_count(value: &Value) -> usize {
             .unwrap_or(0),
         Value::Array(arr) => arr.len(),
         _ => 0,
-    }
-}
-
-pub fn print_page(value: &Value, limit: Option<u32>, output: &OutputFormat) -> Result<bool> {
-    output::print_value(value, output);
-    let at_boundary = limit.is_some_and(|l| item_count(value) == l as usize);
-    if at_boundary {
-        let answer = prompt("Next page? [y/N] ")?;
-        Ok(matches!(answer.to_lowercase().as_str(), "y" | "yes"))
-    } else {
-        Ok(false)
     }
 }
 
