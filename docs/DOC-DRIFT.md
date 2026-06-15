@@ -14,8 +14,8 @@ inaccurate, low harm · LOW = cosmetic/incomplete.
 
 **Status:** Open · Deferred→ADR-NNNN (fix lands with that ADR) · Resolved.
 
-Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
-`.claude/skills/ileap-cli/SKILL.md` path is a **symlink** to it — see D9).
+Doc paths use `SKILL.md` to mean `.agents/skills/ileap/SKILL.md` (the
+`.claude/skills/ileap/SKILL.md` path is a **symlink** to it — see D9).
 
 ---
 
@@ -31,7 +31,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
 | D5 | `SKILL.md` | Short flag `-n` for `--dry-run` (`cli.rs:104,127`) undocumented | LOW | Open |
 | D6 | `SKILL.md` | Short flag `-l` for `--limit` (`cli.rs:112`) undocumented | LOW | Open |
 | D8 | `SKILL.md` | `auth login` idempotent silent-success on a cached token (`auth.rs:107-110`) is not surfaced; compounds D1 confusion | LOW | Open |
-| D9 | skill layout | `.claude/skills/ileap-cli/SKILL.md` is a symlink to `.agents/...`; tools that don't follow symlinks miss it (informational) | LOW | Open |
+| D9 | skill layout | `.claude/skills/ileap/SKILL.md` is a symlink to `.agents/...`; tools that don't follow symlinks miss it (informational) | LOW | Open |
 | D10 | `SKILL.md` | PACT `footprints` honours only the **first** `-f` filter; extra `-f` flags are silently dropped at runtime (only `--dry-run` reveals it). The repeatable-`-f` docs don't note this limitation | MED | Open |
 
 ---
@@ -90,7 +90,7 @@ Doc paths use `SKILL.md` to mean `.agents/skills/ileap-cli/SKILL.md` (the
   described in one place.
 
 ### D9 — Skill file is a symlink (LOW, informational)
-- `.claude/skills/ileap-cli/SKILL.md` → `../../../.agents/skills/ileap-cli/SKILL.md`.
+- `.claude/skills/ileap/SKILL.md` → `../../../.agents/skills/ileap/SKILL.md`.
   No drift between the two (same inode), but symlink-unaware tooling may not see
   the `.claude/` copy. No action unless that becomes a problem.
 
