@@ -6,9 +6,9 @@ name: Release skill bundle
 # scripts/package-skill.sh, and attaches the resulting skill zip to a GitHub
 # release when a tag is pushed.
 #
-# Note: reqwest currently uses native-tls, so the musl builds statically link
-# OpenSSL (hence the alpine container + openssl-libs-static). Switching
-# reqwest to rustls-tls would simplify this.
+# reqwest is configured for rustls-tls (ring), so there is no OpenSSL to link
+# and the static musl binaries build on plain Ubuntu runners without an Alpine
+# container.
 on:
   push:
     tags: ["v*"]
@@ -23,18 +23,25 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
             artifact: ileap-Linux-x86_64
           - os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
             artifact: ileap-Linux-aarch64
     runs-on: ${{ matrix.os }}
-    container: rust:alpine
+    # Build static musl binaries on plain Ubuntu runners (no Alpine container):
+    # JavaScript actions like checkout/upload-artifact cannot run inside Alpine
+    # containers on arm64 runners. With rustls (ring) there is no OpenSSL to
+    # statically link, so musl-tools + the rustup musl target is all we need;
+    # CC=musl-gcc points ring's C build at the musl toolchain.
     env:
-      OPENSSL_STATIC: "1"
+      CC: musl-gcc
     steps:
-      - run: apk add -q musl-dev git pkgconfig openssl-dev openssl-libs-static tar
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
-      - run: cargo build --release --locked
-      - run: cp target/release/ileap ${{ matrix.artifact }}
+      - run: sudo apt-get update && sudo apt-get install -y musl-tools
+      - run: rustup target add ${{ matrix.target }}
+      - run: cargo build --release --locked --target ${{ matrix.target }}
+      - run: cp target/${{ matrix.target }}/release/ileap ${{ matrix.artifact }}
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ${{ matrix.artifact }}

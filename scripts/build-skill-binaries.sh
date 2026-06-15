@@ -20,11 +20,12 @@ build_linux() {
   local platform="$1" arch="$2" out
   out="$(mktemp -d)"
   echo "building Linux $arch from local source (this can take several minutes)..."
+  # rustls (ring) needs a C compiler (gcc) but no OpenSSL.
   docker run --rm --platform "$platform" \
     -v "$REPO_ROOT:/src:ro" -v "$out:/out" \
-    -e OPENSSL_STATIC=1 -e CARGO_TARGET_DIR=/build \
+    -e CARGO_TARGET_DIR=/build \
     rust:alpine \
-    sh -c "apk add -q musl-dev pkgconfig openssl-dev openssl-libs-static && \
+    sh -c "apk add -q musl-dev gcc && \
            cargo install --path /src --locked --root /out"
   cp "$out/bin/ileap" "$BIN_DIR/ileap-Linux-$arch"
   rm -rf "$out"
