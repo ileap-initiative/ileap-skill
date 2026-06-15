@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ config.title }}</title>
+<meta name="description" content="{{ config.description }}">
+<link rel="stylesheet" href="{{ get_url(path='styles.css') }}">
+</head>
+<body>
+
+<div class="preview-banner">Preview &middot; example outputs are generated from sample demo data. <a href="#disclaimer">Important — please read</a></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <img class="logo" src="{{ get_url(path='ileap-logo.png') }}" alt="iLEAP">
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <h1>{{ config.title }}</h1>
+    <p class="tagline">{{ config.extra.tagline }}</p>
+    <a class="cta" href="{{ config.extra.zip_url }}">{{ config.extra.cta_label }}</a>
+  </div>
+</section>
+
+<main class="wrap content">
+
+  {{ section.content | safe }}
+
+  <section class="demos">
+    <h2>Examples</h2>
+    <p class="muted">Each example shows the prompt you type and the result Claude produced.
+       Outputs may differ across agents, environments and runs.</p>
+
+    <article class="demo">
+      <h3>Emissions dashboard</h3>
+      <pre class="prompt">
+        I'm a sustainability manager at the decarbonization department interested in the /ileap skill . Build me a fancy demo dashboard for the decarbonization management team
+      </pre>
+      <iframe src="{{ get_url(path='demos/dashboard.html') }}" title="iLEAP emissions dashboard" loading="lazy"></iframe>
+    </article>
+
+    <article class="demo">
+      <h3>Decarbonization scenario planner</h3>
+      <pre class="prompt">Now build an interactive scenario planner showing how shifting road freight to rail cuts CO2e.</pre>
+      <iframe src="{{ get_url(path='demos/scenario-planner.html') }}" title="iLEAP scenario planner" loading="lazy"></iframe>
+    </article>
+
+    <article class="demo">
+      <h3>TOC and HOC decarbonization table</h3>
+      <pre class="prompt">
+          Create an excelsheet with decarbonization recommendations based on the HOC and TOCs in the /ileap demo endpoint.
+          Explain your logic. The excelsheet is for the sustainability leadership team.
+      </pre>
+      <p class="downloads">Download:
+        <a href="{{ get_url(path='demos/toc-hoc-decarbonization.xlsx') }}">Excel (.xlsx)</a>
+      </p>
+      <p class="muted">Decarbonization potential is an indicative figure derived from sample data, not advice.</p>
+    </article>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <p class="mission">{{ config.extra.mission }}</p>
+    <p>{{ config.extra.provider_note }}</p>
+    <p><a href="{{ config.extra.repo_url }}">Source and license on GitHub</a></p>
+    <p class="fine">Preview. Example outputs were generated from the public iLEAP demo server
+       ({{ config.extra.demo_url }}) and may diverge across agents, environments and runs.</p>
+  </div>
+</footer>
+
+</body>
+</html>

@@ -78,6 +78,20 @@ code. A drift ledger whose own evidence has drifted is worse than none.
   channel back; one has already truncated its detail into a bare summary table.
   Specify the shape ("max N findings, full detail each, no summary table") or
   force structure via a schema.
+- **Verify subagent permissions before fanning out to *produce files*.** In this
+  repo's settings (`.claude/settings.json`) subagents can only `Write` to `/tmp/*`;
+  they cannot write into the workspace and cannot get interactive approval when run
+  in the background. A 2026-06-16 fan-out of three artifact-builders all died on
+  this wall after ~150k wasted tokens (one ran ~10 min). For workspace artifacts,
+  either have the subagent write to `/tmp` and `cp` it in, or build on the main
+  agent. Delegation is for *reads/analysis*, not file production, here.
+- **Prefer script-based transforms to keep large outputs out of context.** When a
+  task means producing or rewriting a big file (HTML, data table, xlsx), drive it
+  with a `python3`/`bash` script run via Bash rather than emitting the content
+  through the model. The 2026-06-16 site work sanitized a 30 KB dashboard, computed
+  a table, and wrote a valid `.xlsx` (stdlib `zipfile`/OOXML, no `openpyxl`) this
+  way — none of the file bodies entered context. This, not agent fan-out, was the
+  real cost lever.
 
 ## 6. Surface consequential side-effects; don't bury them
 
@@ -93,6 +107,11 @@ correction** before answering as-framed.
   Context; **Considered Options**; **Consequences** split Positive / Negative-risks
   / Neutral; a **"Changes (for coding agent)"** section with concrete file-level
   edits. Status: Proposed · Accepted · Superseded · Deprecated · Rejected.
+  - **ADRs may govern non-code artifacts** (the website, packaging, ops). ADR-0010
+    (the microsite) is the first; there, "Changes (for coding agent)" becomes
+    "Changes (for the implementer)" and covers content/hosting instead of source
+    edits. The epistemic labels, Considered Options, and Consequences split still
+    apply.
 - **`docs/adr/README.md`** is the canonical index + candidate backlog. It *owns
   decisions*. Keep the index Status in sync with each ADR file's own Status (they
   have contradicted before).
