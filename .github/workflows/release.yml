@@ -32,10 +32,10 @@ jobs:
       OPENSSL_STATIC: "1"
     steps:
       - run: apk add -q musl-dev git pkgconfig openssl-dev openssl-libs-static tar
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10
       - run: cargo build --release --locked
       - run: cp target/release/ileap ${{ matrix.artifact }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ${{ matrix.artifact }}
           path: ${{ matrix.artifact }}
@@ -43,10 +43,10 @@ jobs:
   build-macos:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - run: cargo build --release --locked
       - run: cp target/release/ileap ileap-Darwin-arm64
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
         with:
           name: ileap-Darwin-arm64
           path: ileap-Darwin-arm64
@@ -55,11 +55,11 @@ jobs:
     needs: [build-linux, build-macos]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       # Download the per-arch binaries straight into the skill's bin/ dir.
       # Each artifact contains a single ileap-<OS>-<ARCH> file named to match
       # what SKILL.md looks up at runtime, so merge-multiple lands them in place.
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           merge-multiple: true
           path: .agents/skills/ileap-cli/bin
@@ -67,6 +67,6 @@ jobs:
       # bundled binaries are runnable straight out of the zip.
       - run: chmod +x .agents/skills/ileap-cli/bin/ileap-*
       - run: scripts/package-skill.sh
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:
           files: dist/ileap-cli-skill.zip
