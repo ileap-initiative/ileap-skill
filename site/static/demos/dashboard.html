@@ -1,644 +1,167 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>iLEAP Emissions Dashboard</title>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>iLEAP Decarbonization Dashboard</title>
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-:root {
-  --green-900: #0f4c35;
-  --green-700: #1a7a55;
-  --green-500: #22c55e;
-  --green-200: #86efac;
-  --green-100: #dcfce7;
-  --green-50: #f0fdf4;
-  --amber-500: #f59e0b;
-  --amber-100: #fef3c7;
-  --red-500: #ef4444;
-  --red-100: #fee2e2;
-  --blue-500: #3b82f6;
-  --blue-100: #dbeafe;
-  --sky-100: #e0f2fe;
-  --sky-900: #0c4a6e;
-  --gray-50: #f8fafc;
-  --gray-100: #f1f5f9;
-  --gray-200: #e2e8f0;
-  --gray-300: #cbd5e1;
-  --gray-400: #94a3b8;
-  --gray-500: #64748b;
-  --gray-700: #334155;
-  --gray-800: #1e293b;
-  --white: #ffffff;
-  --shadow-sm: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.04);
-  --radius-lg: 14px;
-  --radius-md: 8px;
-}
-body {
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: var(--gray-50);
-  color: var(--gray-800);
-  line-height: 1.5;
-  font-size: 14px;
-}
-.container { max-width: 1440px; margin: 0 auto; padding: 32px 24px; }
+:root{--bg:#eef1f4;--panel:#fff;--ink:#16212b;--muted:#64748b;--line:#e6eaef;
+--accent:#0a7d6b;--accent2:#0e9f88;--shadow:0 1px 3px rgba(16,33,45,.06),0 8px 24px rgba(16,33,45,.05);}
+*{box-sizing:border-box;}
+body{margin:0;background:
+ radial-gradient(1200px 400px at 80% -50px,#dff1ed 0,transparent 60%),var(--bg);
+ color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+ font-size:14px;line-height:1.5;-webkit-font-smoothing:antialiased;}
+.wrap{max-width:1080px;margin:0 auto;padding:30px 22px 70px;}
+header.top{display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin-bottom:8px;}
+.logo{height:42px;} .logo-text{margin:0;color:var(--accent);font-size:28px;}
+.title-block h1{margin:0;font-size:22px;letter-spacing:-.2px;}
+.title-block p{margin:2px 0 0;color:var(--muted);font-size:13px;}
+.head-meta{margin-left:auto;text-align:right;font-size:11.5px;color:var(--muted);}
+.head-meta code{background:#fff;border:1px solid var(--line);padding:1px 6px;border-radius:5px;color:var(--ink);}
+.auth{display:inline-block;font-weight:600;font-size:11px;padding:3px 9px;border-radius:20px;
+ background:#e6f4f1;color:var(--accent);}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:14px;margin:22px 0 26px;}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 17px;box-shadow:var(--shadow);
+ position:relative;overflow:hidden;}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+ background:linear-gradient(var(--accent),var(--accent2));}
+.kpi-label{font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);}
+.kpi-val{font-size:27px;font-weight:700;margin:6px 0 3px;letter-spacing:-.5px;}
+.kpi-unit{font-size:12px;font-weight:600;color:var(--muted);margin-left:5px;}
+.kpi-note{font-size:11.5px;color:var(--muted);}
+.grid{display:grid;grid-template-columns:1.4fr 1fr;gap:18px;margin-bottom:18px;}
+@media(max-width:760px){.grid{grid-template-columns:1fr;}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px;box-shadow:var(--shadow);}
+.panel h2{margin:0 0 3px;font-size:15px;}
+.panel .cap{margin:0 0 16px;font-size:12px;color:var(--muted);}
+.chart .lbl{font-size:12px;fill:var(--ink);font-weight:600;}
+.chart .lbl.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:11px;font-weight:500;}
+.chart .val{font-size:11.5px;fill:var(--ink);font-weight:700;}
+.chart .val.sub{fill:var(--muted);font-weight:500;}
+.keyline{display:flex;gap:18px;margin-top:6px;font-size:11.5px;color:var(--muted);}
+.keyline .sw{display:inline-block;width:22px;height:9px;border-radius:2px;vertical-align:middle;margin-right:5px;background:var(--accent);}
+.keyline .sw.faint{opacity:.45;}
+.donut-wrap{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.donut{width:170px;height:170px;flex:none;}
+.dn-big{text-anchor:middle;font-size:19px;font-weight:700;fill:var(--ink);}
+.dn-sm{text-anchor:middle;font-size:8.5px;fill:var(--muted);}
+.legend{display:flex;flex-direction:column;gap:7px;}
+.lg{font-size:12.5px;color:var(--ink);} .lg b{margin-left:3px;}
+.sw{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:7px;vertical-align:-1px;}
+.inv-row{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+.inv{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;box-shadow:var(--shadow);}
+.inv-n{font-size:24px;font-weight:700;color:var(--accent);}
+.inv-l{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;}
+.insight{background:linear-gradient(135deg,#0a7d6b,#0e9f88);color:#eafdf8;border-radius:16px;
+ padding:18px 22px;margin-bottom:18px;box-shadow:var(--shadow);}
+.insight h3{margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.8px;opacity:.85;}
+.insight p{margin:0;font-size:14px;line-height:1.55;}
+.insight b{color:#fff;}
+footer{color:var(--muted);font-size:11.5px;text-align:center;margin-top:34px;padding-top:16px;border-top:1px solid var(--line);}
+.section-h{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:24px 0 10px;}
+</style></head><body><div class="wrap">
 
-/* ── Header ── */
-.header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 32px; padding-bottom: 24px; border-bottom: 2px solid var(--gray-200);
-}
-.header-left { display: flex; align-items: center; gap: 16px; }
-.logo { display: flex; align-items: center; gap: 8px; }
-.logo-wordmark {
-  font-size: 26px; font-weight: 800; color: var(--green-900);
-  letter-spacing: -0.5px; line-height: 1;
-}
-.logo-dot { color: var(--green-500); }
-.logo-tag {
-  background: var(--green-100); color: var(--green-900);
-  font-size: 11px; font-weight: 700; padding: 3px 8px;
-  border-radius: 5px; text-transform: uppercase; letter-spacing: 0.06em;
-}
-.header-divider { width: 1px; height: 36px; background: var(--gray-200); }
-.header-title { font-size: 20px; font-weight: 600; color: var(--gray-800); }
-.header-sub { font-size: 13px; color: var(--gray-500); margin-top: 2px; }
-.header-meta { text-align: right; font-size: 13px; color: var(--gray-500); }
-.header-meta strong { color: var(--gray-700); }
-
-/* ── KPI Grid ── */
-.kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 28px; }
-.kpi-card {
-  background: var(--white); border-radius: var(--radius-lg); padding: 22px 24px;
-  box-shadow: var(--shadow-sm); border: 1px solid var(--gray-100);
-}
-.kpi-icon { font-size: 22px; margin-bottom: 12px; }
-.kpi-label { font-size: 11px; font-weight: 700; color: var(--gray-500); text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 6px; }
-.kpi-value { font-size: 32px; font-weight: 800; color: var(--gray-800); line-height: 1; }
-.kpi-value.green { color: var(--green-700); }
-.kpi-unit { font-size: 12px; color: var(--gray-400); margin-top: 5px; }
-
-/* ── Two-column chart row ── */
-.charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 20px; margin-bottom: 28px; }
-.card {
-  background: var(--white); border-radius: var(--radius-lg); padding: 24px;
-  box-shadow: var(--shadow-sm); border: 1px solid var(--gray-100);
-}
-.card-title {
-  font-size: 14px; font-weight: 700; color: var(--gray-800);
-  margin-bottom: 20px; display: flex; align-items: center; gap: 8px;
-}
-.card-title-icon {
-  width: 28px; height: 28px; border-radius: 7px; background: var(--green-100);
-  display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0;
-}
-.chart-wrap { position: relative; height: 270px; }
-
-/* ── Opportunities ── */
-.opp-header {
-  display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
-}
-.opp-empty { text-align: center; padding: 40px; color: var(--gray-400); }
-.opp-item {
-  display: grid; grid-template-columns: 44px 1fr auto;
-  align-items: center; gap: 14px;
-  padding: 16px; border: 1px solid var(--gray-200);
-  border-radius: var(--radius-md); margin-bottom: 10px;
-  transition: border-color .15s, background .15s;
-}
-.opp-item:hover { border-color: var(--green-500); background: var(--green-50); }
-.opp-rank {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--green-100); display: flex; flex-direction: column;
-  align-items: center; justify-content: center;
-  font-size: 10px; font-weight: 700; color: var(--green-700);
-}
-.opp-rank .rank-num { font-size: 18px; line-height: 1; }
-.opp-title { font-size: 14px; font-weight: 600; color: var(--gray-800); }
-.opp-sub { font-size: 12px; color: var(--gray-500); margin-top: 2px; }
-.opp-pills { display: flex; align-items: center; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-.opp-arrow { font-size: 12px; color: var(--gray-400); }
-.opp-intensities {
-  font-size: 11px; color: var(--gray-500); margin-left: 2px;
-  background: var(--gray-100); padding: 2px 7px; border-radius: 4px;
-}
-.opp-savings-box { text-align: right; min-width: 100px; }
-.opp-savings-amt { font-size: 24px; font-weight: 800; color: #16a34a; line-height: 1; }
-.opp-savings-pct { font-size: 12px; color: var(--gray-400); margin-top: 3px; }
-
-/* ── Tables ── */
-.table-wrap { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-th {
-  text-align: left; padding: 9px 14px; border-bottom: 2px solid var(--gray-200);
-  font-size: 11px; font-weight: 700; color: var(--gray-500);
-  text-transform: uppercase; letter-spacing: 0.06em; white-space: nowrap;
-}
-td { padding: 12px 14px; border-bottom: 1px solid var(--gray-100); vertical-align: top; }
-tr:last-child td { border-bottom: none; }
-tbody tr.main-row:hover td { background: var(--gray-50); }
-code { font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12px; color: var(--gray-700); }
-
-/* ── Badges ── */
-.badge {
-  display: inline-block; padding: 3px 8px; border-radius: 10px;
-  font-size: 11px; font-weight: 600; white-space: nowrap;
-}
-.badge-Road { background: var(--amber-100); color: #92400e; }
-.badge-Rail { background: var(--green-100); color: #166534; }
-.badge-Air { background: var(--red-100); color: #991b1b; }
-.badge-Sea { background: var(--blue-100); color: #1e40af; }
-.badge-InlandWaterway { background: var(--sky-100); color: var(--sky-900); }
-.badge-Active { background: var(--green-100); color: #166534; }
-.badge-Deprecated { background: var(--gray-100); color: var(--gray-500); }
-
-/* ── Intensity bar ── */
-.intensity-cell { display: flex; align-items: center; gap: 8px; }
-.intensity-bar { width: 64px; height: 6px; background: var(--gray-200); border-radius: 3px; overflow: hidden; flex-shrink: 0; }
-.ibar-low { background: var(--green-500); height: 100%; border-radius: 3px; }
-.ibar-mid { background: var(--amber-500); height: 100%; border-radius: 3px; }
-.ibar-high { background: var(--red-500); height: 100%; border-radius: 3px; }
-
-/* ── TCE rows ── */
-.tce-grid {
-  display: grid; grid-template-columns: 2fr 2fr 1fr 1fr 1fr;
-  gap: 6px 12px; font-size: 11px; padding: 8px 12px;
-  background: var(--gray-50); border-radius: 6px; margin-top: 6px;
-}
-.tce-lbl { color: var(--gray-400); }
-.tce-val { color: var(--gray-700); font-weight: 500; }
-.tce-expand { padding: 0 14px 14px; border-bottom: 1px solid var(--gray-100); }
-
-/* ── Mode legend ── */
-.mode-legend { display: flex; gap: 12px; flex-wrap: wrap; }
-.mode-leg-item { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--gray-500); }
-.mode-dot { width: 10px; height: 10px; border-radius: 50%; }
-
-/* ── Footer ── */
-.footer {
-  text-align: center; color: var(--gray-400); font-size: 12px;
-  padding: 28px 0 0; margin-top: 8px; border-top: 1px solid var(--gray-200);
-}
-.footer a { color: var(--green-700); text-decoration: none; }
-.footer a:hover { text-decoration: underline; }
-
-@media (max-width: 1024px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .charts-row { grid-template-columns: 1fr; }
-}
-@media (max-width: 600px) {
-  .kpi-grid { grid-template-columns: 1fr; }
-  .header { flex-direction: column; align-items: flex-start; gap: 12px; }
-}
-</style>
-</head>
-<body>
-<div class="container">
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <div class="logo">
-        <div class="logo-wordmark">i<span class="logo-dot">.</span>LEAP</div>
-        <div class="logo-tag">Dashboard</div>
-      </div>
-      <div class="header-divider"></div>
-      <div>
-        <div class="header-title">Emissions Overview</div>
-        <div class="header-sub" id="header-sub">Loading…</div>
-      </div>
-    </div>
-    <div class="header-meta" id="header-meta"></div>
+<header class="top">
+  <img class="logo" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAA+gAAAGQCAYAAAA9TUphAAArOklEQVR4nOzdTahUZQDG8cc+hSCqRV9kVhYt2qTSLqIoyCCCKKKSihMFFS8uopX7VhFRnSD64N1ItMyFJbSKiChr5aIWliWYQYhkRbTJFncUCTPRmXnfO/f3g8Od3XnuZYaZ/z3DzKoAAAAAza1qPQAAAAAQ6AAAANAFgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0AGBDgAAAB0Q6AAAANABgQ4AAAAdEOgAAADQAYEOAAAAHRDoAAAA0IHFDvRShyS3JVmb5KzGa07XL0m+TvJ6xuGPpktKvSbJc0luSnJB0y3T8VuS3Uleyzj83HoMy0SptyZ5NMm6JOc3XgMncyTJviSfZhzeaT2GJKVuSbIxyZos39clR/2Z5Jsk72Ucvmo9hpMo9cEkm5Jcm+Tsxms4sb+y9Lr098nxX7cPJTmQcfihzUzmYXEDvdRtSTa3njFFezIONzQ7e6m3JPmy2fln63CS9RmH71sPoXOlPpXk7dYz4DTsyDjc23rEilXqdUk+SXJV6ykz8kbGobQewQmU+mqSLa1nMBMHk/yUZH+SA5PbR4/vMg67G27jDCxmoJe6IUtXnRfN8xmHV5qcudSPk9zV5NzzsS3j8FjrEXSu1ENJLmo9A07T7RmHT1qPWJFK/TbJja1nzNizGYc3W4/gOEvvfNzbegbNHE6yK8nnk5+fZRwOtp3EqTin9YAZ2dh6wIysb3juDQ3PPQ+Lep9hWkq9PuKc5W1jlq7iMk+lPpzFj/Mk2ZpS38o4/N16CMcs+ms3Tu7CJHdOjiWl/pjki8nxacZhV5tpnMyiBvrlrQfMSMvf65KG556HRX3bIdNzWesBcIaubD1ghXq69YA5WZPkniQ7Wg/hGM9b/NvayfFQkqTUA0m2J9mecdjZcBfHWdRAX8y37rf6YI9Sz2ty3vla7h/Ww+y5j7Dc+XCoeSv10iR3tJ4xR5sj0HvieYv/c0WSZ5I8k1IPJ/kwyQdJPso4HG66bAXzwAUAmI3Hs7gXDU7k/pS6uvUIjjnSegDLyoVJHk7yfpJfU+rOlPqkx/T8CXQAgNlYpG+TORWrk9zfegTHrKR/DjF9dyd5N8n+lPrS5NsomAOBDgAwbaWuS3Jz6xkNPNJ6ADBVlyR5IcmeyVX1+1Kqhpwhf1wAgOkbWg9oZFNKvbj1CGDqVmXpqvr2JHtT6tbJ52wwZQIdAGD6nmg9oJFzkzzQegQwU1cneTHJvpT6sn/KTdc/AAAA///s3X+oX3Udx/Hn9Tq91tTdqEvmRHEYZORMK8e0tM0fcw5ttbm5ubmjSFCf/hHaH0JEQr+x/vBEJdonUBOGZULZDwMt6g8h/0jUMMooqbBBUCZGOtcf32trutz3xznf9/nxfMCF++dzjHu5r+/5nHMc6JIkSVVKeTX9fn3ntugASVNxNHADB66oHxMd1AUOdEmSpGr17eFwr3SBR1+lXjmewRX135Hyh0m5q6/yngoHuiRJUlVSnsUHpc3gVXSpj04AvgY8Qcqbo2PayoEuSZJUnXWA92P6IYXUZ6cBe0j5QVI+KTqmbRzokiRJ1en78faXvYeU+3wfviS4AHiclK+LDmkTB7okSVIVUp4DNkZnNMiu6ABJ4Y4FbiPlB0j5LdExbeBAlyRJqsaHgLnoiAbZFR0gqTEuZHA1/erokKZzoEuSJFXD4+0HW0HKZ0RHSGqMZcAdpHw/Kb8pOqapHOiSJEmTSnkeuDg6o4F8WJykV7oUeJSUz4wOaSIHuiRJ0uS2A7PREQ3kcVZJh/Jm4BekfGF0SNM40CVJkibn8fZDW07Kq6MjJDXS64AfkvK10SFN4kCXJEmaxOB1YquiMxrMY+6S/p9Z4HZS/nR0SFM40CVJkiazKzqg4baTssf/Jb2WG0l5DykviQ6J5kCXJEmazK7ogIabB9ZGR0hqvM3A/aR8VHRIJAe6JEnSuFI+C1gRndECHnOXNIwLgXv7fOrGgS5JkjQ+Hw43nE0eXZU0pPXAXaTcy63ay3+0JEnSxFKewdeIDWspsCE6QlJrbAG+ufh7tlcc6JIkSeNZAyxER7TItugASa2yA/h6dMS0OdAlSZLG4/H20Wwg5aXREZJa5XpSviU6Ypoc6JIkSaMa3E+9OTqjZeaAjdERklonkXKKjpgWB7okSdLoLmdwX7VG49PcJY3jS6T87uiIaXCgS5Ikjc7j7eO5mJTnoyMktc4SBq9fWxYdUjcHuiRJ0igG91H7RPLxzAJboyMktdKJwN3REXVzoEuSJI1mK4OrORqPx9wljWsdKe+OjqiTA12SJGk0Hm+fzHmkvDw6QlJrfZaUz42OqIsDXZIkaVgpLwDnR2e03AxeRZc0viOAu0n56OiQOjjQJUmShreTwcDUZBzokiZxEvCJ6Ig6ONAlSZKG5/H2aryTlFdER0hqtd2kfGp0RNUc6JIkScMYDMozozM6ZEd0gKRWWwLcGh1RNQe6JEnScK6NDuiYq6MDJLXeWlLeEh1RJQe6JEnScHZGB3TMClI+OzpCUut9mZSPjY6oSlcH+gvRATX5d3SAJEm9NHilj68Gq54Pi5M0qROAm6IjqtLVgf7H6ICa/CE6QJKkntoWHdBRO0jZp+JLmlQi5ROjI6rQ1YH+s+iAmvwkOkCSpN5JeRav9NZlAXhvdISk1jsSuCE6ogrdHOhl8TTwkeiMiu2hLO6JjpB6bH90gDShfdEBLbYOmI+O6DBPJ0iqwvVduBf9yOiA2pTFV0n5Rww+lT2Z9n4YsRf4JWXxcHSI1HMewVTb/SU6oMV893m9riTlj1IWfogkaRLHMrhI+/nokEl0d6ADlMVTwFPRGZI6wSvoartHogNaKeU5YGN0RsfNA5cA90eHSGq9G0j5ZsrixeiQcbX1qrIkSRrefZTFQ9ERLbUJmIuO6AHv8ZdUhQVgR3TEJLp9BV2SNKq/M3gg5WPRIarM05TF7dERLebx9unYRMrXUxb/ig7pkL6c/NoLfBf4c3TICGYYnBw5Djj+EF9vjEvrhI8DOTpiXA50SRpOX+5Bfxdl8dvoCKkRUp4HLorO6Ik54HJgT3RIh/RhoD9LWSxER9Qi5dOB9wNrF7+Oiw1qlbeR8mWUxfejQ8bhQJek4fThD53HHOfSQbYDs9ERPXIVDnSN5r7ogNqUxRPAE8BXAEj5HA6M9TVxYa1xLdDKge496JI0nD5cQf9rdIDUMB5vn67LSHlpdESH9OHv/L3RAVNTFg9TFp+hLNYyOAa/G/hTcFWTbWjrK9f68IMrSZI0mpSXA6uiM3pmCXBldITUeGXxD8rii8ApwE7g0digRjoK+EB0xDgc6JIkSa9WRAf0lE9zl4ZVFi9SFndQFiuBi4EfRyc1zJbogHE40CVJkl7tmuiAnlpLyt186JdUp7J4gLK4BFgPPBud0xDr2njM3YEuSZL0v1I+C1gRndFTM7T0qpfUCGXxA2Al8OvolAaYpYW3zTjQJUmSDubD4WJtiw6QWq0sfg+cDdwTndIArfvAz4EuSZL0spRngKujM3pu1eJD+iSNqyyepyw2Ax8DXojOCbSGlN8QHTEKB7okSdIBawDvgY63IzqgA16KDpiC/dEBjVcWJXBRdEagWeCS6IhRONAlSZIO8Hh7M/g098n14e/8meiAViiLn9Lv323nRQeMog8/uJIkSYeX8hJgc3SGAHgHKb89OkLqjLL4FvC56Iwgq6MDRuFAlyRJGrgCWBodof/yYXFStW4EvhcdEeAMUj4mOmJYDnRJkqQBB2Gz7IwOkDqlLPYzeO3Yo9EpU3YEcG50xLAc6JIkSSkvBTZEZ+ggy0n5nOgIqVPK4nkGI31fdMqUOdAlSZJaZCuwJDpCr+KpBqlqZfEkcFt0xpS15j50B7okSVK/n3DcZFsX300vqVqfBJ6LjpiiVaTciu3bikhJkqTapLwAnB+doUNaYPBueklVKotngJujM6boOOCU6IhhONAlSVLfXYPvU24y34ku1eMLwDPREVN0anTAMBzokiSp7zze3mxbFt9RL6lKZfEc8KnojClyoEuSJDVayqcDK6Mz9JqWAuujI6SOuhV4MjpiSlZEBwzDgS5JkvrMq+ft4DF3qQ5lsQ/4RnTGlHgFXZIkqeF2RgdoKFeQ8lx0hNRRD0YHTIkDXZIkqbFSPhdYHp1RsTuBD0ZH1GAO2BgdIXXUI8A/oyOmwIEuSZLUYF083n4rZXEv8KvokBp08f9LilcWLwEPRWdMwTJSno+OOBwHuiRJ6p+UZ4Gt0RkV+xvw88Xvvx0ZUpN1bfjjWmqpvhxzb/yD4o6MDqhVygXwPuBk2vthxF4Gx05uWXwVgiRJmtylQNfG3h7KYv/i998BboqMqcEssJnBU6clVasvA30hOuBwujvQU76T7hyF2gRcB5wWHSJJUkdsiw6owYGr5mXxOCn/BnhrXE4trsKBLtXh8eiAKXl9dMDh/AcAAP//7N1tyF9lHcDx75gjyZmscnuzQFj1QixLzXzMMh/yYWo20/k0ThC+ucACI+pF0RsjgqA69KbiIjDxcW7DRzZDzdSyVllaGUpLkCm0KJer6bZenPsOc877f//v/zm/c67/9wN75fY/X5jK/ftf17muoa4qv7mUj6Gc4XzWu0n589ERkiQNXnMaeGkHju1g/xWw2yJCWnYaKfd+BUwanLraDfw9OqMDDuhBTowOaMnx0QGSJBVgDc2p4CXZOHOf8WuV+B76IuDK6AipUNujAzrggB7kHdEBLfEbY0mSFq60XXbwRqvldbUV2NZ9SuvWRgdIhXohOqADb40OmEupA7okSdL+mlPAz4zOmLCXgC0H+GclrqIfR8q9P4lZGqBpGNBdQZckSeqRK2lOAy/Jppn3R99IiQM6lLkLQormFvcecECXJEnTpOzT2/f3KGX+0H11dIBUIFfQe8ABXZIkTYdmW/QJ0RkTtgu494D/tLkXfX1nNd1ZRcofiI6QCuOA3gMO6JIkaVqUuHp+F3W1a47fU+o2dw+Le3N7owM6sC86oDD/jA7owJLogLk4oEuSpGmxLjqgBaMM3w/S3JNemhK/cJmkafg5f1F0QGHeGR3Qgbm+0Aw3Df/hSpKkaZfysUBpJ3/vBjbO+bua+9E3tF7TvZWkfEp0hFSQw6MDOvCv6IC5OKBLkqRpUOKp3/eNsL19ltvcJc1leXRAB3ZGB8zFAV2SJJUt5UWUOaDPZ+jeQnNfemnWknJp1+ZJUVxB7wEHdEmSVLrTKW9laA/zOZ29uSd9U2s1cZYBZ0ZHSIWYhgHdFXRJkqRgJa6e309dzXdFvMTr1sBt7tKklPZF5htxBV2SJClMykuAS6IzWjDOO+X3MIATjMdw8czfs6SFcQW9BxzQJUlSyS4ElkZHTNg+4LZ5/6nmQLm7J14TbylwQXSENGgpHw6siM7ogCvokiRJgUrc3v4QdTXuvealnubunejSwnwiOqAjL0QHzMUBXZIklSnlpcB50RktWMiQfSfN/emlWT3z9y1pPGdHB3TkmeiAuTigS5KkUq0FSnw3+dax/2RzsNzmyaX0xhLgU9ER0oCdHx3Qgf9QV3+LjpiLA7okSSpVidueH6Outi/wM0rd5u5p7tI4Uj4GOCw6owNPRQeMwgFdkiSVJ+WVwGnRGS2YxHC9keYe9dKcQcrLoiOkAZqW7e3PRgeMwgFdkiSVaC2wKDqiBeNvb5/VHDD3wII/p38WU+auCalt0zKg9/79c3BAlyRJZSrx9PZfU1fbJvRZbnOXBCm/Fzg1OqMjrqBLkiR1LuUjgaOjM1owyaH6Dpr71Etz8szrDZJG802mZyZ0BV2SJCnAldEBLVn49vZZzUFzj0zs8/qlxN0T0uQ1h8NdEJ3RIVfQJUmSAlwVHdCCp6irpyf8mW5zl6bbd6MDOrQT+Et0xCgc0CVpNCVuBX295dEB0oKlfDJQ4hbnNobp9S18Zh8cTcqroiOkXkv5XOCk6IwOPUhd7Y2OGIUDuiSNpsTToF/vKFJ+T3SEtEClbm+e/IDeHDj3y4l/bj+siw6Qeu4b0QEdeyg6YFQHRQdI0kBMwwo6wOOkvBl4MjpkSu0F/gr8lLoaxGE2vZLyYuCy6IwWbKOuftvSZ68HjmvpsyNdDnwlOkLqpZSvB46KzuiYA7okaZAOA9bM/FKklK+lrr4TnTEw5wDLoiNacHOLn30jcH2Lnx9lFSl/iLp6PDpE6pWU1wFfis7o2L8Z0G4ht7hLktRP3yblI6IjBsbt7fPVbHP/fWufH8vD4qTXSvkM4IfRGQEeoa5ejY4YlQO6JI1mGt5BV/+cHh0wGCkfDFwUndGC7dTVL1p+RqmHxV1Byv6/WwJI+X3ABmBxdEqAwWxvBwd0SRrVtLyDrn45IjpgQNYAB0dHtOCmDp5R6nVry4HToiOkcCmvADYDh0SnBHFAl6QCuQqjCG+JDhgQt7ePq66eALa1/pwYl0cHSKFSPhZ4HFgRnRJkJ/BwdMR8OKBLkqRhS3k5cGZ0Rgt2AD/r6FldrNRHWEPKS6IjpBApXwc8CrwrOiXQTdTVK9ER8+Ep7pIkaegupcz3Km+mrrp6vWY98MWOntWlZcDZwJ3RIVJnUj4MuAU4KzqlB26MDpgvV9AlSdLQub19oZqD6LZ39rxueZq7pkezpf13OJwDvAg8EB0xXw7okiRpuFJeBXw4OqMFO+j+B8s271uPdPHMKf9SuVL+ICnfAvyc6d7S/lo3dLgLaWLc4i5Jkoas1NXzDdTVno6feTtwbcfP7MLsFXylvmevaZbyucAXgI8Gl/TR4La3gwO6JEkatqujA1oScfXZwzQr928PeHbb1uKArlKkfBDNl5PXAUcF1/TVs9TVr6IjxuGALkmShql513JVdEYLXgK2dP7UutpHyrcC13T+7PadQ8pLqaud0SEd2hsd0IHpuDos5bcBJwEnAifTvNazNLSp/34UHTAuB3RJkjRUpW5v30Rd7Q569u2UOaAvAS4DfhAdoolaHR0wcSkfQfPFw5E0Q/kJuEo+jhwdMC4HdEmSNDwpL6LcAT1ie/usn9Cs4B8a2NCWtUzXgL4oOqADh5Lyi8AG4PnomHlYTDOErwCWz/xaARwSGVWQH1NXz0VHjMsBXZIkDdHHaX6oLc0u4N6wp9fVHlJeD6wLa2jPx0h5OXX1YnRIR6ZhQAc4HPhsdIR65evRAQvhNWuSJGmISl09v4u62hXcELmC36ZFeCe6VLq7qasnoyMWwgFdkiQNS8pLgDXRGS3pw3B8H81Kfokujw6Q1KpBr56DA7okSRqeCynzBOPdwMboiJkD6jZFZ7TkeFJeGR0hqRVbqauHoyMWygFdkiQNTanb2+/rwfb2WX1YyW9Lie/XS4KvRgdMggO6JEkajpSXAedFZ7SkT0PxnTQr+iWqogMkTdyfgbuiIybBAV2SJA3JGpo7rUuzB1gfHfE/zUr+3dEZLVlFyu+PjpA0UddSV/uiIybBAV2SJA1Jqdvb76euXoqOeJ3+fGEweZ7mLpXjDurqnuiISXFAlyRJw9Ac7vWR6IyW9Gl7+6wNNCv7JboyOkDSROwCro2OmCQHdEmSNBSX09xlXZp9wG3REftpVvQ3R2e0ZCUpnxgdIWnBvkZdPRcdMUkO6JIkaShKvcP6IepqR3TEAfRxZX9SSv33SZoWfwK+FR0xaQ7okiSp/1I+Ejg6OqMlfR6C19Os8Jfo06S8ODpC0tg+Q129Eh0xaQ7okiRpCEp+Z/jW6IADalb2H4zOaMly4PToCEljuYG6eiQ6og0O6JIkaQiuig5oyWPU1fboiDn0eYV/oTzNXRqe54EUHdEWB3RJktRvKZ8CrIzOaMkQht/+HWA3OZeQ8pLoCEkjewVYTV39IzqkLQ7okiSp70q9+xz6vL19VrPC/1h0RkuWAudHR0ga2eeoq63REW1yQJckSf3VHOJ1aXRGS7ZSV9uiI0Y0hJX+cbnNXRqG9dTV96Ij2uaALkmS+uwcYFl0REuGNPT2f6V/fKtJeWl0hKQ39UfKPYvk/zigS5KkPit5e/tw3u1uVvp/E53RkoOBT0ZHSDqgl4HzqauXo0O64IAuSZL6KeWDgYuiM1ryJHX1dHTEPA1pxX++3OYu9dOrwIXU1TPRIV1xQJckSX11Cc3qZomGOOwOsXlUZ5Fyqa9SSEO1B7iEutoSHdIlB3RJktRXJW9vH96wW1d/AIa26j+qkg8jlIZoH3AFdbUhOqRrDuiSJKl/Ul4OnBGd0ZJt1NUT0RFjKvmwOLe5S/1xDXV1c3REBAd0SZLUR5fSrGqW6KbogAUY3sr/6E6d+WJIUqwvU1ffj46I8l8AAAD//+zdTchlBR3H8d8wTUwwLWYzEEyr2RlK2qRUWpQDpuW7Ns6DLxzaHoiIFkXQKhRqFUfaRCfalY04gmIvVPSKVFRYGUSYaWHK2GIsbUBtcZ8xK807z73n/u859/OBYVx+XSjP77n/e46BDgCsI+ft66hrfpFkLO9uP1u7ktxaHQEb7nPpmturIyoZ6ADAemn7Q0kuqs4YyBPpmp9WRyzImTuwbC8m+VS65uPVIdUMdABg3Uz50/Mxn7efcXd1wIAu2P4FEbA6zyW5Nl3zmeqQdWCgAwDrZspnxuM9bz+ja36S5InqjAHdUh0AG+Rkknema05Uh6wLAx0AWB9tfzjJVD/BfDrJj6ojluTr1QEDurk6ADbE75Kcv/1sC7YZ6ADAOpnyeftX0zUvVkcsyZTP3A+l7S+ojoCJ+3aSt6drHqsOWTcGOsB8pvJDNeNyujpgpdp+V5Kt6owBjf+8/d++l9lFwFR5WBwM43SSTyS5LF3zTHXMOjLQAeazqzqAjTTV11m9mkuTTPU91E9nNmqnYXYJMOVP0W/d/oURsDwPJTmcrrkjXfNCdcy6MtAB5uMTdCp8tzpgxaZ83n5Puub56oglm9JFwH87kOSS6giYiBeSfDbJ29I1D1XHrLvXVQcAAK/oI+maP1RHrEzb70lyQ3XGgKY4Zr+V5FSSN1aHDORYku9XR8DIPZpkK13z4+qQsTDQAXi5HyT5WpJfV4dsuMc2apzPXJNkX3XEQE5l9kCkaema59P2JzLdp54fTdu3E7x8gFX5YpKP+q752THQAeazKd9FvCld85fqCDbSlM/b703XTPWBf8cz3YG+P8llSe6vDoGReTCzK7AHq0PGyEAHmM8mfAf9V8Y5Jdp+f5IrqjMGNMXz9jPuT/JskjdUhwzkWAx0mNdvk3wyXXOiOmTMPCQOYD6b8An6yeoANtYNSfZURwzk2ST3VUcMZnYZMN1/v+SatP3e6ghYc48n+XCSc43zxfkEHQCoNuXz9vsmfN5+xvFM9wF/+5JcmeSu6hBYQ39LckeSz6drnquOmQoDHQCo0/YHk7y7OmNAUz5vP+NEktNJXl8dMpCtGOjwcg8nuTPJl9M1f6+OmRon7gBApa1M9yskpzMbr9PWNc8m+WZ1xoA+kLaf6hsGYF7PJ7knyZF0zTnpmjuN82H4BB0AqDTl8/ZvbI/XTXA8yQerIwayJ8mNSfrqECjwVGavS/tCuuax6phNYKADADXa/pwk51VnDGgTztvPOJ7ZD/G7q0MGcizjG+ib8PYRhvNAkrvSNV+qDtk0TtwBgCpTfX92MjsHvbs6YmW65lSS71RnDOh9afsD1RFnaapfHWEYJ5N8JbMHPu5L11xunNfwCToAUGXKA/3JJB9LO7YPXRcy5Z8rdyf5UJKuOgSW6PdJ7t3+88N0zQvFPWTa/yMFANZV21+c5M3VGQN6U5JPV0ewVFsx0BmvJ5P8LMnPX/q7a/5cm8QrMdABgApTfjgc0/SOtP3BdM3j1SHwGp7KbIi/fIx7wNtIGOgAwGq1/e4kR6szYAduSXJ7dQQb7x9JHk3ySJI//s/fXXOyrIyFGegAwKpdkWR/dQTswLGMZ6Bv0veJH0nyp+qIBfwzyakkz2z/ebV/PpnZAP9rUScrYKADAKvmvJ2xOjdt/5Z0zW+qQ3jJ+emaX1ZHwLJ4zRoAsDptvy/J1dUZsIBj1QFz2oSf8x8wzpmaTfgPFwBYH9cm2VsdAQu4rTqAlzxcHQDLZqADAKvkvJ2xO5i2v6g6ApgmAx0AWI22P5DkSHUGLMFYztyBkTHQAYBVuSnJ7uoIWIJjaftd1RHA9BjoAMCqOG9nKg4keW91BDA9BjoAMLy2P5TkwuoMWKKt6gBgegx0AGAVfHrO1BxN2++pjgCmxUAHAFbh1uoAWLJ9SS6vjgCmxUAHAIbV9oeTHKrOgAF4mjuwVAY6ADA05+1M1TVp+73VEcB0GOgAwHBmr6LyMC2mam+S66ojgOkw0AGAIR3J7JVUMFXO3IGlMdABgCE5b2fqLk/b76+OAKbBQAcAhjH7bu711RkwsN1JbqyOAKbBQAcAhnJlZq+igqlz5g4shYEOAAzFeTub4j1pe89aABZmoAMAyzf7Tu4V1RmwIrviF1LAEhjoAMAQbkyypzoCVsjrBIGFGegAwBB8msimOZy2P1QdAYybgQ4ALFfbH0xySXUGFPApOrAQAx0AWLatzL6TC5vmtuoAYNwMdABg2Zy3s6kOpe3fWh0BjJeBDgAsT9ufk+S86gwo5J3owI4Z6ADAMt1SHQDFfA8d2DEDHQBYppurA6DYwbT9u6ojgHEy0AGA5Wj7S5IcrM6ANeBTdGBHDHQAYFmMEpg5lrbfXR0BjI+BDgAsru33JDlanQFrYn+SI9URwPgY6ADAMrw/s1ECzHiaO3DWDHQAYBm8+xz+0/XblyUAczPQAYDFtP2+JFdXZ8Ca2ZfkquoIYFwMdABgUdcl2VsdAWvImTtwVgx0AGBRztvhlV21fWECMBcDHQDYubY/kOTS6gxYU3syuzABmIuBDgAs4qYk3vcMr26rOgAYDwMdAFiE83b4/46k7b2CEJiLgQ4A7EzbH0pyYXUGrLnd8bA4YE4GOgCwUzdXB8BIGOjAXAx0XlvXnK5OWAHfnwQ4e7dUB8BIXJy2P1gdAay/fwEAAP//7N1fiGZ1GQfw77JtLbRFC7ZFLRUtXmQKYbURKZFBYpEtmln+Kc5tnPuuypvoqpvgQHR16CICTWW0QEWkLJM2RMnUasnY7cKg1guhRGOzi9lsWWd3Zsf3Pc+Z9/f5wMDusO95v+zMO/N+3/Oc51XQ2Vw/vrE6wgT2ph8/XB0CYMfox48kOVQdA3YQy+KATSnobK6NM+hJclv68RPVIZitV6oDTOBAdQB2FMvh4MIYcwc29YbqADAjn0/y+fRjdQ4W73iSh5J8I0P3920eY9cC88zVpenHizN0x6qDMHP9uDvOBsKF+lD68VCG7s/VQYD5UtDZXBsj7qy29ybpknws/Xhphm47Z8NbOIOeJA+nH3+Q5OfVQXjdXklyIkP3lyUc+6qs/sTFXRm666tDNKUf70tydXWMJftakm9VhwDmS0Fnc0P3srPKrIhLknwmyf3VQWbsnUluO/3BKujHE0m6DN1DCzxqC+Ptd1UHaNBPsvoF/aYo6MB5uAadzTmDzmr5wDZv18KIO6vpPUnuTj/uX8jR+nFvklU/s3wqyb3VIRp0V9b/71fZodMLFgE2pKADrbmoOgAUeGuS6xZ0rGuT7FvQsebqwQzdC9UhmjN0z6eNy2ssiwPOSUEH2JpWrkFndV28oOO0sBzOeHudO6oDTOCW9KOpLGBDCjrA1ngyxU73ptd9hPUx+c++/iiz9kqSO6tDNOyOrP4LogeSfLI6BDBPCjoAsFU3JNlTHWLJHsnQnawO0az1MfdfVMeYgDF3YEMKOgCwVba3M4WfVAeYwA3px93VIYD5UdABgM3148EkV1bHmICCXu/OrP6Y+/4k11SHAOZHQQcAtuLmrP4uhsczdMerQzRv6P6W5FfVMSZgzB14DQUdANgK4+1MqYUx9+vSj3urQwDzoqADAOfXj5ckuaw6xgTurg7Aq27P6o+5703yheoQwLwo6ADAZm6tDjCB4xm6p6pDcNr6mPuj1TEmcFN1AGBeFHQA4Nz6cVeSW6pjTODH1QF4jRbG3K9JP+6rDgHMh4IOAJzPFUkOVoeYgPH2+WnhRZM9SW6sDgHMh4IOAJxPC8vhnsvQHa0OwVnWx9xb+LrY5g68SkEHADbWj3uSfKk6xgRaGKXeqe6oDjCBq9KPB6pDAPOgoAMA53JNkv3VISZgvH2+bq8OMIFdcRYdOE1BBwDOpYUN0yeTPFwdgnMYuhNJHquOMQEFHUiioAMAG1nfLN3CezSvZehOVYfgvFoYc/9Y+rGFZYzAJhR0AGAj1yXZWx1iAsbb56+Fbe5J8rXqAEA9BR0A2EgL29tfTPJAdQg2sT7m/kR1jAkYcwcUdADgLOsbpT9dHWMC92ToXq4OwZa0sGn/g+nHy6pDALUUdADgbF9Jsrs6xASMt+8cLWxzT5xFh+Yp6ADA2VrY3v5yknuqQ7BFQ3csyZPVMSZwa3UAoJaCDgD8Xz8eSnK4OsYEHsjQvVgdggvSwpj7wfTjx6tDAHUUdADgTLdUB5iI8fadp4WCnhhzh6Yp6ADAmVoYsT2VZK06BBdo6J5Ocqw6xgRuTD+2sAMC2ICCDgCs68ePJjlUHWMCv8zQnawOwba08J7oB5J8qjoEUENBBwD+p4X3Pk+Su6oDsG2tjLm3sKgR2ICCDgDk9EhtK9e+tlLyVs/QPZk2xtxvSD/uqQ4BTE9BBwCS5Kqsj9auut9m6J6rDsHr0sJ7ou9L8rnqEMD0FHQAIDHezs7RygREKxMtwBkUdABoXT/uTXJ9dYyJtLBkbLUN3RNJTlTHmMC1px+bQEMUdADg2qyP1K66pzN0x6tDsBAtvNCyN8kXq0MA01LQAQDj7ew0d1QHmIgxd2iMgg4ALevH/UmuqY4xEQV9VQzdY2ljzP3q049RoBEKOgC07UtJWng7p+MZuserQ7BQLWxz353kxuoQwHQUdABo203VASbi7Pnqsc0dWDkKOgC0qh8PJrmyOsZEFPRVM3S/SfK36hgTuDL9eKA6BDANBR0A2nVzkl3VISZwMskj1SFYiha2ue9Kcmt1CGAaCjoAtKuV7e13ZuheqQ7BUrQy5t7KpSjQPAUdAFrUj5ckuaw6xkSMt6+uR9PGmPvl6cdD1SGA5VPQAaBNX60OMJEXkjxYHYIlWZ+MaGGbe5LcUh0AWD4FHQBa04+70s54+70ZulPVIViqVsbcXYcODVDQAaA9VyQ5WB1iIsbbV9+v0saY+6H04+XVIYDlWtWC/nx1gCU5WXKvQ/dykhdL7hsWb7uPo1X9uUI7zvze/1RZimk9n+Rn1SFYsvUx9x9Wx5jIhTx2W/i9VfPcGJZoVQv6H6sDLMkzjd43LNJ2v5efXWgKmN4fzvjz+8tSTGvI0L1UHYJJfL86wEQuvoB/+6elpZgPz09ZOata0B9M8kR1iAV7KckPCu//u4X3DYvyuyT3b+uWQ/diku8tNA1M59kka2f8/amqIBN6OMm3q0MwkaE7njb2Kmy9dA/dY1l/HKyqZ5PcWx0CFm13dYClOLqWHD5yZ5IDSd52+mOn+keSR5LcmKE7Vpbi6Nrvc/jIM0nel2R/kj1lWeDCHU9yT5JbM3T/3PZRjq7dl8NH/p3kXUnevqBssEwnkvw0yZczdC+8+tmja7/O4SMXJXlHdvbvyLP9K8mTSb6Toft6jq79pzoQEzq69mQOH7k/ybuTvDnJW4oTLdJfk/woQ/fNC7rV4SN3J9mX5KKsP39bBRv/XIMVsas6AAAAAKCgAwAAwCwo6AAAADADCjoAAADMgIIOAAAAM6CgAwAAwAwo6AAAADADCjoAAADMgIIOAAAAM6CgAwAAwAwo6AAAADADCjoAAADMgIIOAAAAM6CgAwAAwAz8FwAA///t17EAAAAAwCB/62nsKIsEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYEHQAAAAYCM/JpbCWIQk8AAAAASUVORK5CYII=" alt="iLEAP">
+  <div class="title-block"><h1>Decarbonization Dashboard</h1>
+  <p>Transport emissions overview &middot; ISO 14083 / GLEC Framework</p></div>
+  <div class="head-meta">
+    <div><span class="auth">Authenticated</span></div>
+    <div style="margin-top:4px">Source <code>api.preview.ileap.dev</code></div>
+    <div style="margin-top:3px">15 Jun 2026, 22:55 UTC</div>
   </div>
+</header>
 
-  <!-- KPI Cards -->
-  <div class="kpi-grid" id="kpi-grid"></div>
-
-  <!-- Charts -->
-  <div class="charts-row">
-    <div class="card">
-      <div class="card-title">
-        CO₂e WTW per Shipment (kg)
-      </div>
-      <div class="chart-wrap"><canvas id="chart-shipments"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">
-        TOC Emission Intensity (kg CO₂e / t·km)
-      </div>
-      <div class="chart-wrap"><canvas id="chart-tocs"></canvas></div>
-      <div class="mode-legend" id="mode-legend" style="margin-top:14px;"></div>
-    </div>
+<div class="kpis">
+  <div class="kpi">
+    <div class="kpi-label">Total emissions (WTW)</div>
+    <div class="kpi-val">5,480<span class="kpi-unit">kg CO2e</span></div>
+    <div class="kpi-note">Well-to-Wheel across all shipment legs</div>
   </div>
-
-  <!-- Reduction Opportunities -->
-  <div class="card" style="margin-bottom:28px;">
-    <div class="card-title">
-      Where to Reduce Your Emissions
-    </div>
-    <div id="opportunities"></div>
+  <div class="kpi">
+    <div class="kpi-label">Operational (TTW)</div>
+    <div class="kpi-val">3,647<span class="kpi-unit">kg CO2e</span></div>
+    <div class="kpi-note">Tank-to-Wheel, vehicle operation only</div>
   </div>
-
-  <!-- TOCs Table -->
-  <div class="card" style="margin-bottom:28px;">
-    <div class="card-title">
-      Transport Operation Categories (TOCs)
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>TOC ID</th>
-            <th>Mode</th>
-            <th>WTW Intensity</th>
-            <th>TTW Intensity</th>
-            <th>Load Factor</th>
-            <th>Loading</th>
-            <th>Energy Carriers</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="tocs-tbody"></tbody>
-      </table>
-    </div>
+  <div class="kpi">
+    <div class="kpi-label">Upstream energy share</div>
+    <div class="kpi-val">33%<span class="kpi-unit">of WTW</span></div>
+    <div class="kpi-note">Emissions from fuel production</div>
   </div>
-
-  <!-- Shipments Table -->
-  <div class="card" style="margin-bottom:28px;">
-    <div class="card-title">
-      Shipments &amp; Transport Chain Elements
-    </div>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Shipment ID</th>
-            <th>Company</th>
-            <th>Mass (kg)</th>
-            <th>CO₂e WTW (kg)</th>
-            <th>CO₂e TTW (kg)</th>
-            <th>TCEs</th>
-            <th>Period</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="shipments-tbody"></tbody>
-      </table>
-    </div>
+  <div class="kpi">
+    <div class="kpi-label">Freight moved</div>
+    <div class="kpi-val">84.0<span class="kpi-unit">tonnes</span></div>
+    <div class="kpi-note">across 7 transport legs</div>
   </div>
+  <div class="kpi">
+    <div class="kpi-label">Activity distance</div>
+    <div class="kpi-val">6,560<span class="kpi-unit">km</span></div>
+    <div class="kpi-note">over 10 activity records</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-label">Modes in scope</div>
+    <div class="kpi-val">3<span class="kpi-unit">transport modes</span></div>
+    <div class="kpi-note">Road, Rail, Hub operations</div>
+  </div></div>
 
-  <div class="footer">
-    <p>Generated by <strong>iLEAP CLI</strong> &nbsp;·&nbsp;
-    Data from <a href="https://ileap.sine.dev" target="_blank">iLEAP API</a> &nbsp;·&nbsp;
-    Standards: ISO 14083:2023 &amp; GLEC Framework</p>
+<div class="insight">
+  <h3>Management summary</h3>
+  <p>Across 7 transport legs, total <b>Well-to-Wheel emissions are 5,480 kg CO2e</b>, of which
+  <b>33% (1,833 kg)</b> comes from upstream fuel production rather than vehicle
+  operation. <b>Road freight dominates</b> the footprint at 71% of WTW emissions.
+  The largest abatement lever is fleet/fuel choice on road legs &mdash; the highest-intensity operation
+  (toc-small-truck-1) emits 793 gCO2e/tkm, roughly 113x the cleanest.</p>
+</div>
+
+<div class="grid">
+  <div class="panel">
+    <h2>Emissions by transport mode</h2>
+    <p class="cap">kg CO2e &middot; solid = Well-to-Wheel, faded = Tank-to-Wheel</p>
+    <svg viewBox="0 0 520 158" class="chart">
+        <text x="0" y="28" class="lbl">Road</text>
+        <rect x="70" y="14" width="355.0" height="13" rx="3" fill="#e07a5f" opacity="0.95"/>
+        <rect x="70" y="31" width="291.2" height="13" rx="3" fill="#e07a5f" opacity="0.45"/>
+        <text x="433.0" y="25" class="val">3,909</text>
+        <text x="433.0" y="41" class="val sub">3,207</text>
+        <text x="0" y="74" class="lbl">Hub</text>
+        <rect x="70" y="60" width="131.9" height="13" rx="3" fill="#9b5de5" opacity="0.95"/>
+        <rect x="70" y="77" width="40.0" height="13" rx="3" fill="#9b5de5" opacity="0.45"/>
+        <text x="209.86155381033998" y="71" class="val">1,452</text>
+        <text x="209.86155381033998" y="87" class="val sub">440.0</text>
+        <text x="0" y="120" class="lbl">Rail</text>
+        <rect x="70" y="106" width="10.8" height="13" rx="3" fill="#0a7d6b" opacity="0.95"/>
+        <rect x="70" y="123" width="0.0" height="13" rx="3" fill="#0a7d6b" opacity="0.45"/>
+        <text x="88.75597963725666" y="117" class="val">118.4</text>
+        <text x="88.75597963725666" y="133" class="val sub">0.00</text></svg>
+    <div class="keyline"><span><span class="sw"></span>WTW (total)</span><span><span class="sw faint"></span>TTW (operational)</span></div>
+  </div>
+  <div class="panel">
+    <h2>WTW share by mode</h2>
+    <p class="cap">Contribution to total footprint</p>
+    <div class="donut-wrap"><svg viewBox="0 0 170 170" class="donut"><path d="M85.0,21.0 A64,64 0 1 1 22.7,99.6 L46.1,94.1 A40,40 0 1 0 85.0,45.0 Z" fill="#e07a5f"/><path d="M22.7,99.6 A64,64 0 0 1 76.3,21.6 L79.6,45.4 A40,40 0 0 0 46.1,94.1 Z" fill="#9b5de5"/><path d="M76.3,21.6 A64,64 0 0 1 85.0,21.0 L85.0,45.0 A40,40 0 0 0 79.6,45.4 Z" fill="#0a7d6b"/><text x="85" y="80" class="dn-big">5,480</text><text x="85" y="98" class="dn-sm">kg CO2e WTW</text></svg><div class="legend"><div class="lg"><span class="sw" style="background:#e07a5f"></span>Road <b>71%</b></div><div class="lg"><span class="sw" style="background:#9b5de5"></span>Hub <b>26%</b></div><div class="lg"><span class="sw" style="background:#0a7d6b"></span>Rail <b>2%</b></div></div></div>
   </div>
 </div>
 
-<script>
-const DATA = {"shipments":[{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"40000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"shipment-simple-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"1505.88","co2eWTW":"1962.72","distance":{"actual":"423"},"mass":"40000","prevTceIds":[],"shipmentId":"shipment-1","tceId":"abcdef","tocId":"truck-40t-euro5-de","transportActivity":"16920"}]},{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"40000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"shipment-multi-modal-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"0","co2eWTW":"118.44","distance":{"actual":"423"},"mass":"40000","prevTceIds":[],"shipmentId":"shipment-multi-modal-1","tceId":"tce-1-toc-rail-1","tocId":"toc-rail-1","transportActivity":"16920"},{"co2eTTW":"400","co2eWTW":"1320","distance":{"actual":"0"},"hocId":"hoc-transshipment-1","mass":"40000","prevTceIds":["tce-1-toc-rail-1"],"shipmentId":"shipment-multi-modal-1","tceId":"tce-2-hoc-transshipment-1","transportActivity":"0"},{"co2eTTW":"1505.88","co2eWTW":"1692.62","distance":{"actual":"423"},"mass":"40000","prevTceIds":["tce-2-hoc-transshipment-1"],"shipmentId":"shipment-multi-modal-1","tceId":"tce-3-toc-road-1","tocId":"toc-road-1","transportActivity":"16920"}]},{"companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","mass":"4000","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","shipmentId":"pre-and-post-legs-1","specVersion":"1.1.0","status":"Active","tces":[{"co2eTTW":"73.08","co2eWTW":"95.16","distance":{"actual":"30"},"mass":"4000","prevTceIds":[],"shipmentId":"pre-and-post-legs-1","tceId":"tce-1-pre-leg-1","tocId":"toc-small-truck-1","transportActivity":"120"},{"co2eTTW":"40","co2eWTW":"132","distance":{"actual":"0"},"hocId":"hoc-warehouse-1","mass":"4000","prevTceIds":["tce-1-pre-leg-1"],"shipmentId":"pre-and-post-legs-1","tceId":"tce-2-hub-1","transportActivity":"0"},{"co2eTTW":"121.8","co2eWTW":"158.6","distance":{"actual":"50"},"mass":"4000","prevTceIds":["tce-2-hub-1"],"shipmentId":"pre-and-post-legs-1","tceId":"tce-3-post-leg-1","tocId":"toc-small-truck-1","transportActivity":"200"}]}],"tocs":[{"co2eIntensityTTW":"0","co2eIntensityWTW":"0.007","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.33","energyCarriers":[{"emissionFactorTTW":"0","emissionFactorWTW":"97","energyCarrier":"Electric","energyConsumptionUnit":"MJ","feedstocks":[{"feedstock":"Grid","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Rail","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"ambient","tocId":"toc-rail-1","transportActivityUnit":"tkm"},{"co2eIntensityTTW":"0.089","co2eIntensityWTW":"0.116","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.3","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"refrigerated","tocId":"toc-road-1","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"},{"co2eIntensityTTW":"0.089","co2eIntensityWTW":"0.116","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.3","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.6","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"refrigerated","tocId":"truck-40t-euro5-de","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"},{"co2eIntensityTTW":"0.609","co2eIntensityWTW":"0.793","companyName":"Super Duper Transport Co.","createdAt":"2022-05-22T21:47:32Z","emptyDistanceFactor":"0.1","energyCarriers":[{"emissionFactorTTW":"3.17","emissionFactorWTW":"4.13","energyCarrier":"Diesel","energyConsumptionUnit":"kg","feedstocks":[{"feedstock":"Fossil","regionProvenance":"Europe"}],"relativeShare":"1.0"}],"loadFactor":"0.2","mode":"Road","referencePeriodEnd":"2022-01-01T00:00:00Z","referencePeriodStart":"2021-01-01T00:00:00Z","specVersion":"1.1.0","status":"Active","temperatureControl":"ambient","tocId":"toc-small-truck-1","transportActivityUnit":"tkm","truckLoadingSequence":"FTL"}]};
+<div class="panel">
+  <h2>Carbon intensity by Transport Operation Category</h2>
+  <p class="cap">gCO2e per tonne-kilometre (WTW) &middot; lower is better</p>
+  <svg viewBox="0 0 520 168" class="chart">
+        <text x="0" y="27" class="lbl mono">toc-small-truck-1</text>
+        <rect x="160" y="16" width="290.0" height="15" rx="3" fill="#e07a5f"/>
+        <text x="457.0" y="28" class="val">793</text>
+        <text x="0" y="65" class="lbl mono">toc-road-1</text>
+        <rect x="160" y="54" width="42.4" height="15" rx="3" fill="#e07a5f"/>
+        <text x="209.42118537200503" y="66" class="val">116</text>
+        <text x="0" y="103" class="lbl mono">truck-40t-euro5-de</text>
+        <rect x="160" y="92" width="42.4" height="15" rx="3" fill="#e07a5f"/>
+        <text x="209.42118537200503" y="104" class="val">116</text>
+        <text x="0" y="141" class="lbl mono">toc-rail-1</text>
+        <rect x="160" y="130" width="2.6" height="15" rx="3" fill="#0a7d6b"/>
+        <text x="169.55989911727616" y="142" class="val">7</text></svg>
+</div>
 
-// ── Utilities ──────────────────────────────────────────────────────────────────
+<div class="section-h">Data coverage (iLEAP transactions DT1&ndash;DT4)</div>
+<div class="inv-row"><div class="inv"><div class="inv-n">3</div><div class="inv-l">Shipments</div></div><div class="inv"><div class="inv-n">4</div><div class="inv-l">TOCs</div></div><div class="inv"><div class="inv-n">2</div><div class="inv-l">HOCs</div></div><div class="inv"><div class="inv-n">10</div><div class="inv-l">TAD</div></div><div class="inv"><div class="inv-n">1</div><div class="inv-l">AED</div></div></div>
 
-function fmt(n, dp = 2) {
-  const v = parseFloat(n) || 0;
-  return v.toLocaleString(undefined, { minimumFractionDigits: dp, maximumFractionDigits: dp });
-}
+<footer>iLEAP preview demo data &middot; figures are illustrative sample values for demonstration, not verified emissions.
+Generated 15 Jun 2026, 22:55 UTC.</footer>
 
-function fmtShort(n, dp = 1) {
-  const v = parseFloat(n) || 0;
-  if (v >= 1e6) return (v / 1e6).toFixed(2) + 'M';
-  if (v >= 1e3) return (v / 1e3).toFixed(1) + 'k';
-  return v.toFixed(dp);
-}
-
-const MODE_COLOR = {
-  Road: '#f59e0b', Rail: '#22c55e', Air: '#ef4444',
-  Sea: '#3b82f6', InlandWaterway: '#06b6d4',
-};
-const MODE_ICON = {
-  Road: '', Rail: '', Air: '', Sea: '', InlandWaterway: '',
-};
-function mc(mode) { return MODE_COLOR[mode] || '#94a3b8'; }
-function mi(mode) { return MODE_ICON[mode] || ''; }
-
-function badge(text, cls) {
-  return `<span class="badge badge-${cls || text}">${text}</span>`;
-}
-
-function ibarClass(v, max) {
-  const pct = (parseFloat(v) || 0) / max;
-  if (pct < 0.15) return 'ibar-low';
-  if (pct < 0.5)  return 'ibar-mid';
-  return 'ibar-high';
-}
-
-// ── Process Data ───────────────────────────────────────────────────────────────
-
-const shipments = DATA.shipments || [];
-const tocs      = DATA.tocs      || [];
-
-const tocMap = {};
-tocs.forEach(t => { tocMap[t.tocId] = t; });
-
-// Per-shipment totals
-const enriched = shipments.map(s => {
-  const tces = s.tces || [];
-  const co2eWTW = tces.reduce((a, t) => a + (parseFloat(t.co2eWTW) || 0), 0);
-  const co2eTTW = tces.reduce((a, t) => a + (parseFloat(t.co2eTTW) || 0), 0);
-  return { ...s, co2eWTW, co2eTTW };
-});
-
-const totalWTW = enriched.reduce((a, s) => a + s.co2eWTW, 0);
-const totalTTW = enriched.reduce((a, s) => a + s.co2eTTW, 0);
-
-const sortedTocs = [...tocs].sort((a, b) =>
-  (parseFloat(a.co2eIntensityWTW) || 0) - (parseFloat(b.co2eIntensityWTW) || 0)
-);
-const bestToc = sortedTocs[0];
-
-// Best intensity per mode (for reduction analysis)
-const bestByMode = {};
-tocs.forEach(t => {
-  const wtw = parseFloat(t.co2eIntensityWTW) || 0;
-  if (!bestByMode[t.mode] || wtw < bestByMode[t.mode].wtw) {
-    bestByMode[t.mode] = { wtw, toc: t };
-  }
-});
-
-// ── Header ─────────────────────────────────────────────────────────────────────
-
-document.getElementById('header-sub').textContent =
-  `${shipments.length} shipment${shipments.length !== 1 ? 's' : ''} · ${tocs.length} TOC${tocs.length !== 1 ? 's' : ''}`;
-
-document.getElementById('header-meta').innerHTML =
-  `<div>Generated on</div>
-   <strong>${new Date().toLocaleDateString(undefined, { year:'numeric', month:'long', day:'numeric' })}</strong>`;
-
-// ── KPI Cards ──────────────────────────────────────────────────────────────────
-
-const ttwShare = totalWTW > 0 ? ((totalTTW / totalWTW) * 100) : 0;
-
-const kpis = [
-  { icon: '', label: 'Total Shipments', value: shipments.length, unit: 'records', green: false },
-  { icon: '',  label: 'Total CO₂e WTW',  value: fmtShort(totalWTW, 1), unit: 'kg (Well-to-Wheel)', green: false },
-  { icon: '', label: 'TTW Share', value: ttwShare.toFixed(1) + '%', unit: 'of WTW (direct exhaust)', green: false },
-  { icon: '', label: 'Best TOC Intensity', value: bestToc ? fmt(bestToc.co2eIntensityWTW, 3) : '—',
-    unit: bestToc ? `kg/t·km · ${bestToc.mode} · ${bestToc.tocId}` : '', green: true },
-];
-document.getElementById('kpi-grid').innerHTML = kpis.map(k => `
-  <div class="kpi-card">
-    <div class="kpi-icon">${k.icon}</div>
-    <div class="kpi-label">${k.label}</div>
-    <div class="kpi-value${k.green ? ' green' : ''}">${k.value}</div>
-    <div class="kpi-unit">${k.unit}</div>
-  </div>`).join('');
-
-// ── Shipments Chart ────────────────────────────────────────────────────────────
-
-new Chart(document.getElementById('chart-shipments'), {
-  type: 'bar',
-  data: {
-    labels: enriched.map(s => s.shipmentId),
-    datasets: [
-      {
-        label: 'CO₂e WTW',
-        data: enriched.map(s => +s.co2eWTW.toFixed(2)),
-        backgroundColor: '#22c55e',
-        borderRadius: 5,
-        borderSkipped: false,
-      },
-      {
-        label: 'CO₂e TTW',
-        data: enriched.map(s => +s.co2eTTW.toFixed(2)),
-        backgroundColor: '#86efac',
-        borderRadius: 5,
-        borderSkipped: false,
-      },
-    ],
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top', labels: { font: { size: 12 }, boxWidth: 12, padding: 16 } },
-      tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${fmt(c.raw)} kg` } },
-    },
-    scales: {
-      x: { grid: { display: false }, ticks: { font: { size: 11 } } },
-      y: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } },
-           title: { display: true, text: 'kg CO₂e', font: { size: 11 }, color: '#94a3b8' } },
-    },
-  },
-});
-
-// ── TOCs Chart ─────────────────────────────────────────────────────────────────
-
-new Chart(document.getElementById('chart-tocs'), {
-  type: 'bar',
-  data: {
-    labels: sortedTocs.map(t => t.tocId),
-    datasets: [{
-      label: 'WTW Intensity',
-      data: sortedTocs.map(t => parseFloat(t.co2eIntensityWTW) || 0),
-      backgroundColor: sortedTocs.map(t => mc(t.mode)),
-      borderRadius: 5,
-      borderSkipped: false,
-    }],
-  },
-  options: {
-    indexAxis: 'y',
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (c) => {
-            const t = sortedTocs[c.dataIndex];
-            return [` WTW: ${fmt(c.raw, 3)} kg/t·km`, ` Mode: ${t.mode}`];
-          },
-        },
-      },
-    },
-    scales: {
-      x: { grid: { color: '#f1f5f9' }, ticks: { font: { size: 11 } } },
-      y: { grid: { display: false }, ticks: { font: { size: 10 } } },
-    },
-  },
-});
-
-// Mode legend
-const modesPresent = [...new Set(tocs.map(t => t.mode))];
-document.getElementById('mode-legend').innerHTML = modesPresent.map(m => `
-  <div class="mode-leg-item">
-    <div class="mode-dot" style="background:${mc(m)};"></div>
-    ${mi(m)} ${m}
-  </div>`).join('');
-
-// ── Reduction Opportunities ────────────────────────────────────────────────────
-
-function computeOpps() {
-  const results = [];
-  shipments.forEach(s => {
-    (s.tces || []).forEach(tce => {
-      if (!tce.tocId) return;
-      const cur = tocMap[tce.tocId];
-      if (!cur) return;
-
-      const curWTW    = parseFloat(tce.co2eWTW) || 0;
-      const curI      = parseFloat(cur.co2eIntensityWTW) || 0;
-      const activity  = parseFloat(tce.transportActivity) || 0;
-      if (activity <= 0 || curWTW <= 0) return;
-
-      let best = null;
-      Object.entries(bestByMode).forEach(([mode, info]) => {
-        if (mode === cur.mode) return;
-        if (info.wtw >= curI) return;
-        const potWTW = activity * info.wtw;
-        const savings = curWTW - potWTW;
-        const pct = (savings / curWTW) * 100;
-        if (savings > 0 && (!best || savings > best.savings)) {
-          best = { mode, ...info, potWTW, savings, pct };
-        }
-      });
-
-      if (best) {
-        results.push({
-          shipmentId: s.shipmentId,
-          tceId: tce.tceId,
-          mass: parseFloat(s.mass) || 0,
-          distance: parseFloat((tce.distance || {}).actual) || 0,
-          currentMode: cur.mode,
-          currentI: curI,
-          currentCO2e: curWTW,
-          altMode: best.mode,
-          altI: best.wtw,
-          altCO2e: best.potWTW,
-          savings: best.savings,
-          savingsPct: best.pct,
-        });
-      }
-    });
-  });
-  return results.sort((a, b) => b.savings - a.savings);
-}
-
-const opps = computeOpps();
-
-const oppEl = document.getElementById('opportunities');
-if (opps.length === 0) {
-  oppEl.innerHTML = `<div class="opp-empty">
-     No modal shift opportunities found — your routes already use the most efficient available modes.
-  </div>`;
-} else {
-  // Total potential savings
-  const totalSavings = opps.reduce((a, o) => a + o.savings, 0);
-  oppEl.innerHTML = `
-    <div style="background:var(--green-50); border:1px solid var(--green-200); border-radius:8px; padding:14px 16px; margin-bottom:18px; font-size:13px; color:#166534;">
-      <strong>${opps.length} opportunity${opps.length > 1 ? 'ies' : 'y'} identified</strong> — switching these transport legs to lower-emission modes could save up to
-      <strong>${fmtShort(totalSavings, 1)} kg CO₂e WTW</strong>
-      (${((totalSavings / totalWTW) * 100).toFixed(1)}% of total emissions).
-    </div>
-    ${opps.map((o, i) => `
-    <div class="opp-item">
-      <div class="opp-rank">
-        <span style="font-size:10px;">RANK</span>
-        <span class="rank-num">${i + 1}</span>
-      </div>
-      <div>
-        <div class="opp-title">${mi(o.currentMode)}  ${mi(o.altMode)} &nbsp;Modal shift: ${o.currentMode} to ${o.altMode}</div>
-        <div class="opp-sub">
-          Shipment <code>${o.shipmentId}</code> · TCE <code>${o.tceId}</code>
-          ${o.distance > 0 ? ` · ${o.distance.toLocaleString()} km` : ''}
-          · ${(o.mass / 1000).toFixed(1)} t payload
-        </div>
-        <div class="opp-pills">
-          ${badge(o.currentMode)}
-          <span class="opp-arrow"></span>
-          ${badge(o.altMode)}
-          <span class="opp-intensities">
-            ${fmt(o.currentI, 3)}  ${fmt(o.altI, 3)} kg CO₂e/t·km
-          </span>
-        </div>
-      </div>
-      <div class="opp-savings-box">
-        <div class="opp-savings-amt">−${fmtShort(o.savings, 1)} kg</div>
-        <div class="opp-savings-pct">${o.savingsPct.toFixed(1)}% less CO₂e</div>
-      </div>
-    </div>`).join('')}`;
-}
-
-// ── TOCs Table ─────────────────────────────────────────────────────────────────
-
-const maxI = Math.max(...tocs.map(t => parseFloat(t.co2eIntensityWTW) || 0), 0.001);
-
-document.getElementById('tocs-tbody').innerHTML = tocs.length === 0
-  ? `<tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:32px;">No TOCs</td></tr>`
-  : tocs.map(t => {
-    const wtw = parseFloat(t.co2eIntensityWTW) || 0;
-    const pct = Math.min((wtw / maxI) * 100, 100).toFixed(1);
-    const carriers = (t.energyCarriers || []).map(ec =>
-      `${ec.energyCarrier}${ec.feedstocks && ec.feedstocks[0] ? ' ('+ec.feedstocks[0].feedstock+')' : ''}`
-    ).join(', ');
-    return `<tr>
-      <td><code>${t.tocId}</code></td>
-      <td>${badge(t.mode)}</td>
-      <td>
-        <div class="intensity-cell">
-          <span>${fmt(wtw, 3)}</span>
-          <div class="intensity-bar">
-            <div class="${ibarClass(wtw, maxI)}" style="width:${pct}%"></div>
-          </div>
-        </div>
-      </td>
-      <td>${fmt(t.co2eIntensityTTW, 3)}</td>
-      <td>${((parseFloat(t.loadFactor) || 0) * 100).toFixed(0)}%</td>
-      <td style="font-size:12px;">${t.truckLoadingSequence || '—'}</td>
-      <td style="font-size:12px; color:var(--gray-500);">${carriers || '—'}</td>
-      <td>${badge(t.status)}</td>
-    </tr>`;
-  }).join('');
-
-// ── Shipments Table ────────────────────────────────────────────────────────────
-
-document.getElementById('shipments-tbody').innerHTML = enriched.length === 0
-  ? `<tr><td colspan="8" style="text-align:center;color:var(--gray-400);padding:32px;">No shipments</td></tr>`
-  : enriched.flatMap((s, idx) => {
-    const rowId = `tce-${idx}`;
-    const tces = s.tces || [];
-    const periodStart = (s.referencePeriodStart || '').slice(0, 10);
-    const periodEnd   = (s.referencePeriodEnd   || '').slice(0, 10);
-
-    const tceRows = tces.map(tce => {
-      const cur = tce.tocId ? tocMap[tce.tocId] : null;
-      const legType = tce.tocId
-        ? `${badge(cur ? cur.mode : '?')} <code style="font-size:10px;">${tce.tocId}</code>`
-        : (tce.hocId ? `<span class="badge" style="background:#f1f5f9;color:#64748b;">Hub</span> <code style="font-size:10px;">${tce.hocId}</code>` : '—');
-      const dist = (tce.distance || {}).actual || '—';
-      return `<div class="tce-grid">
-        <div><span class="tce-lbl">TCE ID</span><br><span class="tce-val" style="font-size:10px;">${tce.tceId}</span></div>
-        <div><span class="tce-lbl">Leg</span><br>${legType}</div>
-        <div><span class="tce-lbl">CO₂e WTW</span><br><span class="tce-val">${fmt(tce.co2eWTW)} kg</span></div>
-        <div><span class="tce-lbl">CO₂e TTW</span><br><span class="tce-val">${fmt(tce.co2eTTW)} kg</span></div>
-        <div><span class="tce-lbl">Distance</span><br><span class="tce-val">${dist} km</span></div>
-      </div>`;
-    }).join('');
-
-    return [
-      `<tr class="main-row">
-        <td><code>${s.shipmentId}</code></td>
-        <td style="font-size:12px;">${s.companyName || '—'}</td>
-        <td>${(parseFloat(s.mass) || 0).toLocaleString()}</td>
-        <td><strong>${fmt(s.co2eWTW)} kg</strong></td>
-        <td style="color:var(--gray-500);">${fmt(s.co2eTTW)} kg</td>
-        <td style="color:var(--gray-500);">${tces.length}</td>
-        <td style="font-size:12px; color:var(--gray-500); white-space:nowrap;">${periodStart}<br>${periodEnd}</td>
-        <td>${badge(s.status)}</td>
-      </tr>`,
-      tceRows ? `<tr><td colspan="8" class="tce-expand">${tceRows}</td></tr>` : '',
-    ];
-  }).join('');
-</script>
-</body>
-</html>
+</div></body></html>
