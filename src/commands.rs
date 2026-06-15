@@ -1,130 +1,219 @@
 use anyhow::Result;
+use clap::CommandFactory;
 use serde_json::Value;
 use std::future::Future;
+use std::time::Duration;
 
-use crate::cli::{Command, FootprintsCmd, ListCmd, OutputFormat};
-use crate::client::Client;
+use crate::auth;
+use crate::cli::{Cli, Command, FootprintsCmd, ListCmd, OutputFormat};
 use crate::error::CliError;
 use crate::output;
-use crate::pager::item_count;
 
-pub async fn run_cmd(client: &Client, cmd: Command, output: &OutputFormat) -> Result<()> {
-    match cmd {
-        Command::Footprints { cmd } => match cmd {
-            FootprintsCmd::List(args) => {
-                // PACT supports a single OData $filter expression (ADR-0008);
-                // reject extra -f flags instead of silently dropping them.
-                if args.filter.len() > 1 {
-                    return Err(CliError::Other(format!(
-                        "PACT footprints accepts at most one --filter; got {}. \
-                         Combine conditions in one OData expression, e.g. -f \"{} and {}\"",
-                        args.filter.len(),
-                        args.filter[0],
-                        args.filter[1]
-                    ))
-                    .into());
-                }
-                let filter = args.filter.first().map(String::as_str);
-                if args.dry_run {
-                    output::print_value(&client.footprints_dry_run(args.limit, 0, filter), output);
-                    return Ok(());
-                }
-                run_list(args.max_pages, args.limit, output, |off| {
-                    client.footprints(args.limit, off, filter)
-                })
-                .await?;
-            }
-            FootprintsCmd::Get { id, dry_run } => {
-                if dry_run {
-                    output::print_value(&client.footprint_dry_run(&id), output);
-                    return Ok(());
-                }
-                output::print_value(&client.footprint(&id).await?, output);
-            }
-        },
+/// Count the records carried by a list response, whether the server returns a
+/// `{"data": [...]}` envelope or a bare array. Used by `run_list` to decide
+/// whether a page was full (so another may follow).
+fn item_count(value: &Value) -> usize {
+    match value {
+        Value::Object(obj) => obj
+            .get("data")
+            .and_then(|d| d.as_array())
+            .map(|a| a.len())
+            .unwrap_or(0),
+        Value::Array(arr) => arr.len(),
+        _ => 0,
+    }
+}
 
-        Command::Shipments {
+/// Single dispatcher for every command (ADR-0009). `main` parses and formats
+/// errors; the credential chain lives in `auth::resolve_client`, called lazily
+/// by exactly the arms that need a client — `auth` and the bare-help case do not.
+pub async fn run_cmd(cli: Cli) -> Result<()> {
+    let output = cli.output.clone();
+    let timeout = cli.timeout.map(Duration::from_secs);
+
+    match cli.command {
+        None => {
+            Cli::command().print_help()?;
+            println!();
+        }
+
+        Some(Command::Auth { cmd }) => {
+            auth::run_auth(
+                cmd,
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+                &output,
+            )
+            .await?;
+        }
+
+        Some(Command::Footprints { cmd }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
+            match cmd {
+                FootprintsCmd::List(args) => {
+                    // PACT supports a single OData $filter expression (ADR-0008);
+                    // reject extra -f flags instead of silently dropping them.
+                    if args.filter.len() > 1 {
+                        return Err(CliError::Other(format!(
+                            "PACT footprints accepts at most one --filter; got {}. \
+                             Combine conditions in one OData expression, e.g. -f \"{} and {}\"",
+                            args.filter.len(),
+                            args.filter[0],
+                            args.filter[1]
+                        ))
+                        .into());
+                    }
+                    let filter = args.filter.first().map(String::as_str);
+                    if args.dry_run {
+                        output::print_value(
+                            &client.footprints_dry_run(args.limit, 0, filter),
+                            &output,
+                        );
+                        return Ok(());
+                    }
+                    run_list(args.max_pages, args.limit, &output, |off| {
+                        client.footprints(args.limit, off, filter)
+                    })
+                    .await?;
+                }
+                FootprintsCmd::Get { id, dry_run } => {
+                    if dry_run {
+                        output::print_value(&client.footprint_dry_run(&id), &output);
+                        return Ok(());
+                    }
+                    output::print_value(&client.footprint(&id).await?, &output);
+                }
+            }
+        }
+
+        Some(Command::Shipments {
             cmd: ListCmd::List(args),
-        } => {
+        }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/shipments", args.limit, 0, &args.filter),
-                    output,
+                    &output,
                 );
                 return Ok(());
             }
-            run_list(args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, &output, |off| {
                 client.shipments(args.limit, off, &args.filter)
             })
             .await?;
         }
 
-        Command::Tocs {
+        Some(Command::Tocs {
             cmd: ListCmd::List(args),
-        } => {
+        }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tocs", args.limit, 0, &args.filter),
-                    output,
+                    &output,
                 );
                 return Ok(());
             }
-            run_list(args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, &output, |off| {
                 client.tocs(args.limit, off, &args.filter)
             })
             .await?;
         }
 
-        Command::Hocs {
+        Some(Command::Hocs {
             cmd: ListCmd::List(args),
-        } => {
+        }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/hocs", args.limit, 0, &args.filter),
-                    output,
+                    &output,
                 );
                 return Ok(());
             }
-            run_list(args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, &output, |off| {
                 client.hocs(args.limit, off, &args.filter)
             })
             .await?;
         }
 
-        Command::Tad {
+        Some(Command::Tad {
             cmd: ListCmd::List(args),
-        } => {
+        }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/tad", args.limit, 0, &args.filter),
-                    output,
+                    &output,
                 );
                 return Ok(());
             }
-            run_list(args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, &output, |off| {
                 client.tad(args.limit, off, &args.filter)
             })
             .await?;
         }
 
-        Command::Aed {
+        Some(Command::Aed {
             cmd: ListCmd::List(args),
-        } => {
+        }) => {
+            let client = auth::resolve_client(
+                &cli.base_url,
+                cli.token.as_deref(),
+                cli.username.as_deref(),
+                cli.password.as_deref(),
+                timeout,
+            )
+            .await?;
             if args.dry_run {
                 output::print_value(
                     &client.list_dry_run("/v1/ileap/aed", args.limit, 0, &args.filter),
-                    output,
+                    &output,
                 );
                 return Ok(());
             }
-            run_list(args.max_pages, args.limit, output, |off| {
+            run_list(args.max_pages, args.limit, &output, |off| {
                 client.aed(args.limit, off, &args.filter)
             })
             .await?;
-        }
-
-        Command::Auth { .. } => {
-            unreachable!("auth command is handled before run_cmd")
         }
     }
 
@@ -240,29 +329,58 @@ mod tests {
 }
 
 #[cfg(test)]
+mod item_count_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn item_count_object_format() {
+        assert_eq!(item_count(&json!({"data": [1, 2, 3]})), 3);
+    }
+
+    #[test]
+    fn item_count_array_format() {
+        assert_eq!(item_count(&json!([1, 2])), 2);
+    }
+
+    #[test]
+    fn item_count_empty_object() {
+        assert_eq!(item_count(&json!({"data": []})), 0);
+    }
+
+    #[test]
+    fn item_count_non_data_value() {
+        assert_eq!(item_count(&json!("irrelevant")), 0);
+    }
+}
+
+#[cfg(test)]
 mod filter_validation_tests {
     use super::*;
     use crate::cli::ListArgs;
 
     /// More than one -f for PACT footprints is an error naming both expressions,
-    /// checked before any request (dry_run would short-circuit right after).
+    /// checked before any request (dry_run would short-circuit right after). A
+    /// `--token` is supplied so `resolve_client` succeeds without a network call.
     #[tokio::test]
     async fn footprints_list_rejects_multiple_filters() {
-        let client = Client::from_token("http://filter-test.invalid", "tok".into(), None);
         let args = ListArgs {
             filter: vec!["a eq 1".into(), "b eq 2".into()],
             dry_run: true,
             ..Default::default()
         };
-        let err = run_cmd(
-            &client,
-            Command::Footprints {
+        let cli = Cli {
+            base_url: "http://filter-test.invalid".into(),
+            token: Some("tok".into()),
+            username: None,
+            password: None,
+            output: OutputFormat::Compact,
+            timeout: None,
+            command: Some(Command::Footprints {
                 cmd: FootprintsCmd::List(args),
-            },
-            &OutputFormat::Compact,
-        )
-        .await
-        .unwrap_err();
+            }),
+        };
+        let err = run_cmd(cli).await.unwrap_err();
         let ce = err.downcast_ref::<CliError>().expect("expected CliError");
         assert!(matches!(ce, CliError::Other(_)), "got: {ce:?}");
         let msg = ce.to_string();
