@@ -2,7 +2,10 @@
 
 ## Status
 
-Proposed (2026-06-11). Promotes backlog candidate **C3**.
+Proposed (2026-06-11) — **implemented** in
+[PR #15](https://github.com/sine-fdn/ileap-cli/pull/15)
+(branch `adr-0008-pact-filter-semantics`). Promotes backlog candidate **C3**.
+See **Implementation** at the end of this document.
 
 ## Context
 
@@ -118,3 +121,34 @@ cargo build && cargo clippy --all-targets -- -D warnings && cargo test
 
 Manually: `ileap footprints list -f "a eq 1" -f "b eq 2"` exits non-zero with
 the combined-expression hint; single `-f` and `--dry-run` behave as before.
+
+## Implementation
+
+Implemented on branch `adr-0008-pact-filter-semantics`
+([PR #15](https://github.com/sine-fdn/ileap-cli/pull/15), 2026-06-11), based on
+`main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
+-- -D warnings` clean; `cargo test` pass (**34 unit + 10 integration, 0
+failed**).
+
+**Files:** `src/commands.rs` (§1), `src/client.rs` (§2), `src/cli.rs` (§3),
+plus tests (§4).
+
+**Decisions left to the implementer, as resolved:**
+- The "Neutral" section left the error layer open (dispatch-layer `CliError`
+  vs clap validation); implemented as **dispatch-layer `CliError::Other`
+  (exit 1)** so the `--dry-run` path shares the same check, as the ADR
+  preferred.
+
+**Deviations from the Changes text:** none of substance.
+- §1 implemented verbatim (validation before both the dry-run and live paths;
+  error names both expressions and shows the combined-`and` hint).
+- §2: `footprints` / `footprints_dry_run` take `Option<&str>`; the in-code
+  OData comment now also points at this ADR.
+- §4: `footprints_list_rejects_multiple_filters` (unit, via `run_cmd` with
+  `dry_run: true` so no request is attempted) and
+  `footprints_sends_single_odata_filter_param` (wiremock, asserts the
+  `$filter` query param reaches the server).
+
+**Conflict note:** touches the same `commands.rs` footprints dispatch arm as
+ADR-0009 ([PR #16](https://github.com/sine-fdn/ileap-cli/pull/16)); whichever
+merges second rebases that one arm.
