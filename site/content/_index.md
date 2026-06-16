@@ -33,20 +33,20 @@ By default, the skill pulls in example data from the public **demo server** (`ap
 
 ## What to expect {#disclaimer}
 
-**Where we are.** The iLEAP Skill is **under active development** and offered as a community
-preview. **Please do not use it for production purposes yet.**
-
-**What is safe to do.** Explore iLEAP data, try out queries, and share feedback. Because AI
-can make mistakes, always review the skill's output before you rely on it. When you pull in
-data, make sure you have the rights to process it with the skill.
-
-**Good to know.**
-
-- This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
-- The skill has only been built for and tested with **Claude/Anthropic**. It should work with
-  other providers, including local AI deployments, too.
-- AI use carries a **significant environmental impact**. We take this seriously and weigh it
-  against the emissions reductions the iLEAP Initiative is working to unlock.
+<dl class="expect">
+  <dt>Where we are</dt>
+  <dd>The iLEAP Skill is <strong>under active development</strong> and offered as a community preview. <strong>Please do not use it for production purposes yet.</strong></dd>
+  <dt>What is safe to do</dt>
+  <dd>Explore iLEAP data, try out queries, and share feedback. Because AI can make mistakes, always review the skill's output before you rely on it. When you pull in data, make sure you have the rights to process it with the skill.</dd>
+  <dt>Good to know</dt>
+  <dd>
+    <ul>
+      <li>This is <strong>not an endorsement</strong> of Claude, Anthropic, or any other AI approach or vendor.</li>
+      <li>The skill has only been built for and tested with <strong>Claude/Anthropic</strong>. It should work with other providers, including local AI deployments, too.</li>
+      <li>AI use carries a <strong>significant environmental impact</strong>. We take this seriously and weigh it against the emissions reductions the iLEAP Initiative is working to unlock.</li>
+    </ul>
+  </dd>
+</dl>
 
 We would love to hear from you. Please
 <a href="mailto:team@ileap.global">send us your feedback</a>, and check back for updates.
