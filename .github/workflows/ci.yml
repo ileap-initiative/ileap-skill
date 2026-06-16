@@ -10,6 +10,16 @@ env:
   RUSTFLAGS: "-D warnings"
 
 jobs:
+  website-smoketest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@3c5f7ea28cd621ae0bf5283f0e981fb97b8a7af9
+        with:
+          toolchain: stable
+      - name: Build and serve the website
+        run: make site-build site-check
   ci:
     name: CI (${{ matrix.rust }})
     runs-on: ubuntu-latest
