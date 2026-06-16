@@ -15,6 +15,7 @@ and builds it for you.
 
 ## Install in Claude.ai {#installation}
 
+0. Sign up for a Claude.ai account, or similar offering, if you have not already. (This skill was only tested with Anthropic's offering so far).
 1. Download the skill using the button above (`ileap-skill.zip`).
 2. In Claude.ai, open **Settings → Capabilities → Skills**.
 3. Choose **Upload skill** and select the zip file.
@@ -30,12 +31,22 @@ By default, the skill pulls in example data from the public **demo server** (`ap
 
 **Point the skill at your own iLEAP endpoint to work with your own data.**
 
-## Important – please read {#disclaimer}
+## What to expect {#disclaimer}
 
-1. The iLEAP Skill can make mistakes. Always review its output.
-2. **Do not use it for production purposes yet.**
-3. When you pull in data, make sure you have the rights to process that data with the skill.
-4. This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
-5. AI use carries a **significant environmental impact**.
-6. The skill has only been built for and tested with **Claude/Anthropic**. It should work with other providers, including local AI deployments, too.
-7. The iLEAP skill is **under active development**. Please <a href="mailto:team@ileap.global">provide feedback</a>, and check back for updates.
+**Where we are.** The iLEAP Skill is **under active development** and offered as a community
+preview. **Please do not use it for production purposes yet.**
+
+**What is safe to do.** Explore iLEAP data, try out queries, and share feedback. Because AI
+can make mistakes, always review the skill's output before you rely on it. When you pull in
+data, make sure you have the rights to process it with the skill.
+
+**Good to know.**
+
+- This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
+- The skill has only been built for and tested with **Claude/Anthropic**. It should work with
+  other providers, including local AI deployments, too.
+- AI use carries a **significant environmental impact**. We take this seriously and weigh it
+  against the emissions reductions the iLEAP Initiative is working to unlock.
+
+We would love to hear from you. Please
+<a href="mailto:team@ileap.global">send us your feedback</a>, and check back for updates.
