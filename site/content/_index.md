@@ -13,7 +13,7 @@ and builds it for you.
 
 (TOC = Transport Operation Category. HOC = Hub Operation Category.)
 
-## Install in Claude.ai
+## Install in Claude.ai {#installation}
 
 1. Download the skill using the button above (`ileap-skill.zip`).
 2. In Claude.ai, open **Settings → Capabilities → Skills**.
