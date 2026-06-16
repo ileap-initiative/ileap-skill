@@ -30,12 +30,12 @@ By default, the skill pulls in example data from the public **demo server** (`ap
 
 **Point the skill at your own iLEAP endpoint to work with your own data.**
 
-## Important — please read {#disclaimer}
+## Important – please read {#disclaimer}
 
-- The iLEAP skill is **under active development**.
-- It can make mistakes — always review its output.
-- **Do not use it for production purposes yet.**
-- When you pull in data, make sure you have the rights to process that data with the skill.
-- This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
-- AI use carries a **significant environmental impact**.
-- The skill is **not Claude-only** — it works in other settings and with other providers, including efficient local AI deployments.
+1. The iLEAP skill is **under active development**.
+2. It can make mistakes. Always review its output.
+3. **Do not use it for production purposes yet.**
+4. When you pull in data, make sure you have the rights to process that data with the skill.
+5. This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
+6. AI use carries a **significant environmental impact**.
+7. Although we still need to verify this: the skill has been tested and built for **Claude/Anthropic***. Yet, we assume it will also work in other settings and providers, including local AI deployments.
