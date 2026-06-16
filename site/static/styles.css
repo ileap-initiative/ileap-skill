@@ -38,11 +38,18 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-ser
 .content h2 { color:var(--ink); font-size:24px; margin:36px 0 12px; }
 .content h3 { color:var(--ink); font-size:18px; margin:24px 0 10px; }
 .content p { margin:10px 0; }
-.content ol { margin:12px 0 12px 22px; }
-.content ol li { margin:6px 0; }
+.content ol, .content ul { margin:12px 0 12px 22px; }
+.content ol li, .content ul li { margin:6px 0; }
 .content a { color:var(--blue); }
 
 .muted { color:var(--muted); font-size:14px; }
+
+/* "What to expect" definition list: plain label + description */
+.content .expect { margin:12px 0; }
+.content .expect dt { font-weight:600; color:var(--ink); margin-top:14px; }
+.content .expect dt:first-of-type { margin-top:0; }
+.content .expect dd { margin:2px 0 0; }
+.content .expect dd ul { margin:4px 0 0 20px; }
 
 .demos { margin-top:24px; }
 .demo { background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
