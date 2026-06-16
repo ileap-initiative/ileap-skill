@@ -37,5 +37,5 @@ By default, the skill pulls in example data from the public **demo server** (`ap
 3. When you pull in data, make sure you have the rights to process that data with the skill.
 4. This is **not an endorsement** of Claude, Anthropic, or any other AI approach or vendor.
 5. AI use carries a **significant environmental impact**.
-6. Although we still need to verify this: the skill has only been built for and tested with **Claude/Anthropic**. It should work with other providers, including local AI deployments, too.
-7. The iLEAP skill is **under active development**. Please provide feedback, and check back for updates.
+6. The skill has only been built for and tested with **Claude/Anthropic**. It should work with other providers, including local AI deployments, too.
+7. The iLEAP skill is **under active development**. Please <a href="mailto:team@ileap.global">provide feedback</a>, and check back for updates.
