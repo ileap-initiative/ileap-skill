@@ -19,7 +19,10 @@ and builds it for you.
 1. Download the skill using the button above (`ileap-skill.zip`).
 2. In Claude.ai, open **Customize → Skills** and click the **+ button**.
 3. Click **Create skill → Upload a skill**, and select the zip file you downloaded.
-4. Go to the Capabilities Tab (e.g. https://claude.ai/admin-settings/capabilities), and add `*.ileap.dev` to the *Domain allowlist*.
+4. If you have Team subscription (instead of an individual under a "Pro Plan" etc.),
+     a team admin then also needs to update the *Domain allowlist*
+     (https://claude.ai/admin-settings/capabilities), adding `*.ileap.dev` to it.
+     This is required for the skill to be able to call the iLEAP API on the demo server.
 5. Start a chat and paste one of the example prompts below. The skill connects to
    the public iLEAP demo server automatically — no account or credentials needed to
    try it.
