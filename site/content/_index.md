@@ -17,8 +17,8 @@ and builds it for you.
 
 0. Sign up for a Claude.ai account, or similar offering, if you have not already. (This skill was only tested with Anthropic's offering so far).
 1. Download the skill using the button above (`ileap-skill.zip`).
-2. In Claude.ai, open **Settings → Capabilities → Skills**.
-3. Choose **Upload skill** and select the zip file.
+2. In Claude.ai, open **Customize → Skills** and click the **+ button**.
+3. Click **Create skill → Upload a skill**, and select the zip file you downloaded.
 4. Go to the Capabilities Tab (e.g. https://claude.ai/admin-settings/capabilities), and add `*.ileap.dev` to the *Domain allowlist*.
 5. Start a chat and paste one of the example prompts below. The skill connects to
    the public iLEAP demo server automatically — no account or credentials needed to
