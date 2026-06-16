@@ -47,12 +47,14 @@ body { font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Roboto',sans-ser
 .demos { margin-top:24px; }
 .demo { background:var(--white); border:1px solid var(--line); border-radius:var(--radius);
   box-shadow:var(--shadow); padding:22px; margin:20px 0; }
+.demo h3 { margin-top:0; }
 .demo .prompt { background:var(--bg-soft); border:1px solid var(--line); border-radius:8px;
   padding:12px 14px; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; font-size:13px;
   white-space:pre-wrap; color:var(--body); margin:8px 0 14px; }
 .demo iframe { width:100%; height:560px; border:1px solid var(--line); border-radius:8px;
   background:#fff; }
 .downloads { font-size:15px; }
+
 
 .footer { border-top:1px solid var(--line); margin-top:40px; padding:28px 0 48px;
   color:var(--muted); font-size:14px; }
