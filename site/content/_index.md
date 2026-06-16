@@ -5,9 +5,9 @@ template = "index.html"
 
 ## What it does
 
-The iLEAP skill lets you explore **transport emissions data** — shipments,
+The iLEAP skill lets you explore **transport emissions data** – shipments,
 Transport Operation Categories (TOCs), Hub Operation Categories (HOCs), footprints
-and more — just by asking Claude in plain language. No spreadsheets, no API calls.
+and more – just by asking Claude in plain language. No spreadsheets, no API calls.
 Ask for a dashboard, a what-if scenario, or an export, and Claude fetches the data
 and builds it for you.
 
