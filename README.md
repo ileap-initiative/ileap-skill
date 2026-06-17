@@ -10,7 +10,7 @@ tools such as Claude.ai, Claude, or similar software offerings.
 > **Status: community preview.** The skill works today, and we are sharing it early to gather
 > feedback before committing to a stable release. Expect changes between now and then.
 
-**You can download the latest version of the iLEAP Skill [here](https://github.com/sine-fdn/ileap-cli/releases/latest/download/ileap-skill.zip).**
+**You can download the latest version of the iLEAP Skill [here](https://github.com/ileap-initiative/ileap-skill/releases/latest/download/ileap-skill.zip).**
 
 ## Who is this for?
 

@@ -3,7 +3,7 @@
 ## Status
 
 Proposed (2026-06-11) — **implemented** in
-[PR #15](https://github.com/sine-fdn/ileap-cli/pull/15)
+[PR #15](https://github.com/ileap-initiative/ileap-skill/pull/15)
 (branch `adr-0008-pact-filter-semantics`). Promotes backlog candidate **C3**.
 See **Implementation** at the end of this document.
 
@@ -125,7 +125,7 @@ the combined-expression hint; single `-f` and `--dry-run` behave as before.
 ## Implementation
 
 Implemented on branch `adr-0008-pact-filter-semantics`
-([PR #15](https://github.com/sine-fdn/ileap-cli/pull/15), 2026-06-11), based on
+([PR #15](https://github.com/ileap-initiative/ileap-skill/pull/15), 2026-06-11), based on
 `main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
 -- -D warnings` clean; `cargo test` pass (**34 unit + 10 integration, 0
 failed**).
@@ -150,5 +150,5 @@ plus tests (§4).
   `$filter` query param reaches the server).
 
 **Conflict note:** touches the same `commands.rs` footprints dispatch arm as
-ADR-0009 ([PR #16](https://github.com/sine-fdn/ileap-cli/pull/16)); whichever
+ADR-0009 ([PR #16](https://github.com/ileap-initiative/ileap-skill/pull/16)); whichever
 merges second rebases that one arm.

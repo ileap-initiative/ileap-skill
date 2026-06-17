@@ -191,4 +191,4 @@ its fallback clause: `item_count` (+ its tests) moved into `commands.rs` and the
 **New test:** `auth_login_username_only_non_tty_reports_missing_password`
 (integration).
 
-[PR #14]: https://github.com/sine-fdn/ileap-cli/pull/14
+[PR #14]: https://github.com/ileap-initiative/ileap-skill/pull/14

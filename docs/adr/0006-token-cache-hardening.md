@@ -3,7 +3,7 @@
 ## Status
 
 Proposed (2026-06-11) — **implemented** in
-[PR #13](https://github.com/sine-fdn/ileap-cli/pull/13)
+[PR #13](https://github.com/ileap-initiative/ileap-skill/pull/13)
 (branch `adr-0006-token-cache-hardening`). Promotes backlog candidate **C4**
 and widens it with two related defects found in review. See
 **Implementation** at the end of this document.
@@ -143,7 +143,7 @@ and a scheme-prefixed filename.
 ## Implementation
 
 Implemented on branch `adr-0006-token-cache-hardening`
-([PR #13](https://github.com/sine-fdn/ileap-cli/pull/13), 2026-06-11), based on
+([PR #13](https://github.com/ileap-initiative/ileap-skill/pull/13), 2026-06-11), based on
 `main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
 -- -D warnings` clean; `cargo test` pass (**34 unit + 10 integration, 0
 failed**), including the two new tests from §3: `token_file_distinguishes_schemes`

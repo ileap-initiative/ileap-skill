@@ -15,8 +15,8 @@ render_emoji = false         # skill policy: no emojis
 
 [extra]
 skill_name = "ileap"
-zip_url = "https://github.com/sine-fdn/ileap-cli/releases/latest/download/ileap-skill.zip"
-repo_url = "https://github.com/sine-fdn/ileap-cli"
+zip_url = "https://github.com/ileap-initiative/ileap-skill/releases/latest/download/ileap-skill.zip"
+repo_url = "https://github.com/ileap-initiative/ileap-skill"
 demo_url = "https://api.preview.ileap.dev"
 tagline = "Turn iLEAP transport-emissions data into dashboards, scenarios and reports – by asking Claude in plain language."
 cta_label = "Download the iLEAP skill"

@@ -38,7 +38,7 @@ If the file exists but cannot be read or is empty, stop and inform the user: "SC
 
 ## Prerequisites
 
-This skill uses **prebuilt `ileap` binaries only** — never compile the CLI at runtime (no `cargo install`, no `cargo run`, no `cargo build`). The binaries are built from the ileap-cli repository and shipped inside the skill bundle, so the skill works in any environment, including sandboxed ones (e.g. Claude.ai) without a Rust toolchain. Obtain a working binary by trying these steps **in order** — stop at the first one that succeeds:
+This skill uses **prebuilt `ileap` binaries only** — never compile the CLI at runtime (no `cargo install`, no `cargo run`, no `cargo build`). The binaries are built from the ileap-skill repository and shipped inside the skill bundle, so the skill works in any environment, including sandboxed ones (e.g. Claude.ai) without a Rust toolchain. Obtain a working binary by trying these steps **in order** — stop at the first one that succeeds:
 
 **Step 1 — Already on PATH?**
 
@@ -62,7 +62,7 @@ fi
 
 If `ileap --version` succeeds, use it and skip the rest of this section. Remember to prepend `/tmp/ileap-bin` to PATH (or use the absolute path `/tmp/ileap-bin/ileap`) in every subsequent shell invocation, since environment changes do not persist between commands.
 
-**Step 3 — No binary available.** Report to the user which platform was detected (`uname -s` / `uname -m`) and which binaries exist in the skill's `bin/` directory, then stop — do not attempt to fetch data or generate a dashboard without a working CLI binary, and do not compile one. Inform the user: "The skill bundle has no `ileap` binary for this platform. Rebuild the bundle from the ileap-cli repository using `scripts/build-skill-binaries.sh` and `scripts/package-skill.sh`."
+**Step 3 — No binary available.** Report to the user which platform was detected (`uname -s` / `uname -m`) and which binaries exist in the skill's `bin/` directory, then stop — do not attempt to fetch data or generate a dashboard without a working CLI binary, and do not compile one. Inform the user: "The skill bundle has no `ileap` binary for this platform. Rebuild the bundle from the ileap-skill repository using `scripts/build-skill-binaries.sh` and `scripts/package-skill.sh`."
 
 ## Overview
 

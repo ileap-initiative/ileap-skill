@@ -3,7 +3,7 @@
 ## Status
 
 Proposed (2026-06-11) — **implemented** in
-[PR #14](https://github.com/sine-fdn/ileap-cli/pull/14)
+[PR #14](https://github.com/ileap-initiative/ileap-skill/pull/14)
 (branch `adr-0007-pagination-loop-correctness`). Absorbs backlog candidate
 **C5** (`merge_pages` clones). Respects ADR-0004 (Accepted): the generic
 `run_list` bound stays. See **Implementation** at the end of this document.
@@ -153,7 +153,7 @@ wiremock test).
 ## Implementation
 
 Implemented on branch `adr-0007-pagination-loop-correctness`
-([PR #14](https://github.com/sine-fdn/ileap-cli/pull/14), 2026-06-11), based on
+([PR #14](https://github.com/ileap-initiative/ileap-skill/pull/14), 2026-06-11), based on
 `main` at `42897cf`. Verified: `cargo build` pass; `cargo clippy --all-targets
 -- -D warnings` clean; `cargo test` pass (**33 unit + 11 integration, 0
 failed**) — including, unchanged, the ADR-0004 pagination unit tests
