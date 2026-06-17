@@ -1,5 +1,5 @@
 +++
-title = "iLEAP Skill for Claude"
+title = "iLEAP Skill for AI assistants"
 template = "index.html"
 +++
 
@@ -7,19 +7,19 @@ template = "index.html"
 
 The iLEAP skill lets you explore **transport emissions data** – shipments,
 Transport Operation Categories (TOCs), Hub Operation Categories (HOCs), footprints
-and more – just by asking Claude in plain language. No spreadsheets, no API calls.
-Ask for a dashboard, a what-if scenario, or an export, and Claude fetches the data
+and more – just by asking an AI assistant in plain language. No spreadsheets, no API calls.
+Ask for a dashboard, a what-if scenario, or an export, and the AI fetches the data
 and builds it for you.
 
 (TOC = Transport Operation Category. HOC = Hub Operation Category.)
 
-## Install in Claude.ai {#installation}
+## Installing at Claude.ai {#installation}
 
-0. Sign up for a Claude.ai account, or similar offering, if you have not already. (This skill was only tested with Anthropic's offering so far).
+0. Sign up for a Claude.ai account, or a similar offering, if you have not already. (This skill has only been tested with Anthropic's offering so far.)
 1. Download the skill using the button above (`ileap-skill.zip`).
 2. In Claude.ai, open **Customize → Skills** and click the **+ button**.
 3. Click **Create skill → Upload a skill**, and select the zip file you downloaded.
-4. If you have Team subscription (instead of an individual under a "Pro Plan" etc.),
+4. If you have a Team subscription (instead of an individual "Pro Plan" etc.),
      a team admin then also needs to update the *Domain allowlist*
      (https://claude.ai/admin-settings/capabilities), adding `*.ileap.dev` to it.
      This is required for the skill to be able to call the iLEAP API on the demo server.
@@ -30,7 +30,7 @@ and builds it for you.
 ## Where does my data go?
 
 The skill only runs the queries you ask for, against the iLEAP endpoint you choose.
-By default, the skill pulls in example data from the public **demo server** (`api.preview.ileap.dev`). Below examples are based on the demo server.
+By default, the skill pulls in example data from the public **demo server** (`api.preview.ileap.dev`). The examples below are based on the demo server.
 
 **Point the skill at your own iLEAP endpoint to work with your own data.**
 
