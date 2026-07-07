@@ -26,7 +26,7 @@ build_linux() {
     -e CARGO_TARGET_DIR=/build \
     rust:alpine \
     sh -c "apk add -q musl-dev gcc && \
-           cargo install --path /src --locked --root /out"
+           cargo install --path /src/cli --locked --root /out"
   cp "$out/bin/ileap" "$BIN_DIR/ileap-Linux-$arch"
   rm -rf "$out"
   echo "wrote $BIN_DIR/ileap-Linux-$arch"
@@ -37,7 +37,7 @@ build_linux linux/arm64 aarch64
 
 if command -v cargo >/dev/null 2>&1; then
   echo "building native host binary..."
-  cargo build --release --locked --manifest-path "$REPO_ROOT/Cargo.toml"
+  cargo build --release --locked --manifest-path "$REPO_ROOT/cli/Cargo.toml"
   cp "$REPO_ROOT/target/release/ileap" "$BIN_DIR/ileap-$(uname -s)-$(uname -m)"
   echo "wrote $BIN_DIR/ileap-$(uname -s)-$(uname -m)"
 else
