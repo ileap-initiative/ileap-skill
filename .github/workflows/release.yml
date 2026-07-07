@@ -69,10 +69,10 @@ jobs:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
           merge-multiple: true
-          path: .agents/skills/ileap/bin
+          path: ileap/bin
       # upload-artifact does not preserve the executable bit; restore it so the
       # bundled binaries are runnable straight out of the zip.
-      - run: chmod +x .agents/skills/ileap/bin/ileap-*
+      - run: chmod +x ileap/bin/ileap-*
       - run: scripts/package-skill.sh
       - uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda
         with:

@@ -1,5 +1,5 @@
 /target
 /dist
-/.agents/skills/ileap/bin/
+/ileap/bin/
 /bin
 /site/public

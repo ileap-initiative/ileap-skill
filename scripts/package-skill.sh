@@ -7,13 +7,13 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SKILL_SRC="$REPO_ROOT/.agents/skills/ileap"
+SKILL_SRC="$REPO_ROOT/ileap"
 DIST="$REPO_ROOT/dist"
 STAGING="$(mktemp -d)"
 trap 'rm -rf "$STAGING"' EXIT
 
 [ -f "$SKILL_SRC/SKILL.md" ] || { echo "error: $SKILL_SRC/SKILL.md not found" >&2; exit 1; }
-[ -f "$SKILL_SRC/SCHEMAS.md" ] || { echo "error: $SKILL_SRC/SCHEMAS.md not found" >&2; exit 1; }
+[ -f "$SKILL_SRC/references/SCHEMAS.md" ] || { echo "error: $SKILL_SRC/references/SCHEMAS.md not found" >&2; exit 1; }
 
 mkdir -p "$DIST"
 cp -R "$SKILL_SRC" "$STAGING/ileap"
