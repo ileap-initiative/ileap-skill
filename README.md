@@ -70,10 +70,10 @@ We would love to hear from you. Please
 
 ## Technical Details
 
-1. The iLEAP CLI is implemented in Rust (see [src/](src/)).
+1. The iLEAP CLI is implemented in Rust (see [cli/](cli/)).
 2. The skill uses prebuilt static Linux binaries of it. With every release,
      an `ileap-skill.zip` with pre-built binaries is created.
 3. To build them locally and after cloning the repo, you can either
-     run `cargo build --release`, or `cargo install --path .` to install the CLI on your machine.
-4. The skill is available in [.agents/skills/ileap](.agents/skills/ileap) and can be used as a
+     run `cargo build --release`, or `cargo install --path cli` to install the CLI on your machine.
+4. The skill is available in [ileap](ileap) and can be used as a
      template for building your own skills on top of the iLEAP CLI.

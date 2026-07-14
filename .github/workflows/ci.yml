@@ -20,6 +20,18 @@ jobs:
           toolchain: stable
       - name: Build and serve the website
         run: make site-build site-check
+  validate-skill:
+    name: Validate skill against the Agent Skills spec
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install skills-ref
+        run: pip install "git+https://github.com/agentskills/agentskills.git#subdirectory=skills-ref"
+      - name: Validate ileap skill
+        run: skills-ref validate ./ileap
   ci:
     name: CI (${{ matrix.rust }})
     runs-on: ubuntu-latest

@@ -1,1 +1,0 @@
-../../../.agents/skills/ileap/SKILL.md

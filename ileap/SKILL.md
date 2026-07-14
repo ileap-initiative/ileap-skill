@@ -11,28 +11,28 @@ description: >-
   "show ileap", "fetch ileap", "list shipments", "list footprints", "query iLEAP", "ileap
   summary", "show tocs", "show hocs", "show tad", "show aed", "build a dashboard", "create a
   dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
-allowed-tools: Bash, Read, Write
+allowed-tools: Bash Read Write
 ---
 
 # iLEAP CLI Skill
 
 ## Step 0 — Read schemas before doing anything else
 
-**Read `SCHEMAS.md` — located in the same directory as this SKILL.md — now, before reading further or taking any action.**
+**Read [SCHEMAS.md](./references/SCHEMAS.md) — located in the ./references directory — now, before reading further or taking any action.**
 
 It contains the authoritative terminology definitions and field schemas for all iLEAP resources. Without it you will make mistakes — for example, TOC stands for Transport Operation **Category** (not Characteristics), and field names differ from what general knowledge would suggest.
 
 Throughout this document, "the skill directory" means the directory containing this SKILL.md file.
 
-If `SCHEMAS.md` does not exist in the skill directory, stop and inform the user: "SCHEMAS.md is missing from the skill directory. Cannot proceed safely without authoritative field definitions. Please reinstall the skill." Do not attempt to infer field names from general knowledge.
+If [SCHEMAS.md](./references/SCHEMAS.md) does not exist in the skill directory, stop and inform the user: "SCHEMAS.md is missing from the skill directory. Cannot proceed safely without authoritative field definitions. Please reinstall the skill." Do not attempt to infer field names from general knowledge.
 
 If the file exists but cannot be read or is empty, stop and inform the user: "SCHEMAS.md in the skill directory is unreadable or empty. Cannot proceed safely. Please reinstall the skill."
 
 ## DO NOT
 
-- **DO NOT** read the CLI source code to understand the API or data shapes — use SCHEMAS.md instead.
+- **DO NOT** read the CLI source code to understand the API or data shapes — use [SCHEMAS.md](./references/SCHEMAS.md) instead.
 - **DO NOT** implement your own data-fetching logic — use the CLI commands documented here.
-- **DO NOT** assume what any iLEAP term means — check the Terminology table in SCHEMAS.md first.
+- **DO NOT** assume what any iLEAP term means — check the Terminology table in [SCHEMAS.md](./references/SCHEMAS.md) first.
 - **DO NOT** write a new CLI command when the user asks for a dashboard — run the Dashboard Procedure below.
 - **DO NOT** violate the dashboard emoji policy. See Styling constraints: No emojis.
 
@@ -169,7 +169,7 @@ ileap -o compact shipments list --yes -f origin.city=Berlin
 ileap -o compact shipments list --yes -f "created=gt:2024-01-01T00:00:00Z"
 ```
 
-For common filterable fields and how to discover deeper nested fields from the OpenAPI spec, see [SCHEMAS.md](./SCHEMAS.md).
+For common filterable fields and how to discover deeper nested fields from the OpenAPI spec, see [SCHEMAS.md](./references/SCHEMAS.md).
 
 **PACT footprints** use OData syntax:
 
@@ -291,7 +291,7 @@ Use this value in the filename (e.g. `/tmp/ileap-dashboard-20240315-142300.html`
 
 ```bash
 SKILL_DIR=<absolute path of the directory containing this SKILL.md>
-if [ -f "$SKILL_DIR/ileap-logo.png" ]; then base64 < "$SKILL_DIR/ileap-logo.png" | tr -d '\n' > /tmp/ileap-logo-b64.txt; echo "logo available"; else echo "no logo"; fi
+if [ -f "$SKILL_DIR/assets/ileap-logo.png" ]; then base64 < "$SKILL_DIR/assets/ileap-logo.png" | tr -d '\n' > /tmp/ileap-logo-b64.txt; echo "logo available"; else echo "no logo"; fi
 ```
 
 Then write the HTML using the **Write tool**, then open the file:
@@ -319,7 +319,7 @@ If the open command fails, fall back to the headless behavior: provide the file 
 
 **Before calling the Write tool, confirm each of the following 7 items is present in the HTML you are about to write:**
 
-1. **Header** — iLEAP logo and metadata: If `ileap-logo.png` exists in the skill directory (see Step 3b), embed it inline as `<img src="data:image/png;base64,<contents of /tmp/ileap-logo-b64.txt>">` so the HTML is fully self-contained and renders on any machine; if the logo is unavailable, omit the `<img>` element entirely and render the text "iLEAP" as a plain `<h1>` instead. Include the base URL and generation timestamp alongside the logo/heading.
+1. **Header** — iLEAP logo and metadata: If `assets/ileap-logo.png` exists in the skill directory (see Step 3b), embed it inline as `<img src="data:image/png;base64,<contents of /tmp/ileap-logo-b64.txt>">` so the HTML is fully self-contained and renders on any machine; if the logo is unavailable, omit the `<img>` element entirely and render the text "iLEAP" as a plain `<h1>` instead. Include the base URL and generation timestamp alongside the logo/heading.
 2. **Auth status badge** — shows whether the session is authenticated.
 3. **Summary cards** — one card per resource type showing the total record count, or an error message if the fetch failed.
 4. **Expanded record cards** — one card per record showing all mandatory fields (see table below); if a mandatory field is absent from a record, show it explicitly as `—`. Plus any additional top-level scalar or object fields present in the record, rendered as a key-value table; nested arrays (e.g. TCEs inside a shipment) should each be rendered as a sub-table.

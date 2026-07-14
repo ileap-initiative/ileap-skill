@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build prebuilt `ileap` binaries for the ileap skill bundle from the
-# LOCAL repository source, and place them in .agents/skills/ileap/bin/.
+# LOCAL repository source, and place them in ileap/bin/.
 #
 # The skill uses prebuilt binaries exclusively (no Rust toolchain at runtime),
 # so this must be run before packaging the skill with scripts/package-skill.sh.
@@ -13,7 +13,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-BIN_DIR="$REPO_ROOT/.agents/skills/ileap/bin"
+BIN_DIR="$REPO_ROOT/ileap/bin"
 mkdir -p "$BIN_DIR"
 
 build_linux() {
@@ -26,7 +26,7 @@ build_linux() {
     -e CARGO_TARGET_DIR=/build \
     rust:alpine \
     sh -c "apk add -q musl-dev gcc && \
-           cargo install --path /src --locked --root /out"
+           cargo install --path /src/cli --locked --root /out"
   cp "$out/bin/ileap" "$BIN_DIR/ileap-Linux-$arch"
   rm -rf "$out"
   echo "wrote $BIN_DIR/ileap-Linux-$arch"
@@ -37,7 +37,7 @@ build_linux linux/arm64 aarch64
 
 if command -v cargo >/dev/null 2>&1; then
   echo "building native host binary..."
-  cargo build --release --locked --manifest-path "$REPO_ROOT/Cargo.toml"
+  cargo build --release --locked --manifest-path "$REPO_ROOT/cli/Cargo.toml"
   cp "$REPO_ROOT/target/release/ileap" "$BIN_DIR/ileap-$(uname -s)-$(uname -m)"
   echo "wrote $BIN_DIR/ileap-$(uname -s)-$(uname -m)"
 else
