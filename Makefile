@@ -20,6 +20,9 @@ ZOLA         := $(BIN_DIR)/zola
 UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
+SKILL_CLI_BIN_DIR := $(CURDIR)/ileap/bin
+SKILL_CLI_BIN := $(SKILL_CLI_BIN_DIR)/ileap-$(UNAME_S)-$(UNAME_M)
+
 ifeq ($(UNAME_S),Darwin)
   ifeq ($(UNAME_M),arm64)
     ZOLA_TARGET := aarch64-apple-darwin
@@ -116,7 +119,7 @@ tools-clean: ## Remove downloaded tools (./bin: zola, skills-ref venv)
 	rm -rf $(SKILLS_REF_VENV)
 
 .PHONY: distclean
-distclean: site-clean tools-clean ## Remove built output and downloaded tools
+distclean: site-clean tools-clean rust-clean skill-clean ## Remove built output and downloaded tools
 
 .PHONY: ci
 ci: ## run *all* CI actions locally
@@ -134,3 +137,20 @@ ci-cli: ## Perform all checks on the CLI (clippy, fmt, test, build)
 	cargo fmt --all -- --check
 	cargo test --all-features
 	cargo build --release
+
+.PHONY: package
+package: $(SKILL_CLI_BIN) ## Build a (local) skill release
+	scripts/package-skill.sh
+
+.PHONY: skill-clean
+skill-clean: ## Remove the built skill release
+	rm -rf ileap/bin
+
+$(SKILL_CLI_BIN):
+	@echo "Building the iLEAP CLI for $(UNAME_S)/$(UNAME_M)..."
+	cargo build --release --locked
+	mkdir -p $(SKILL_CLI_BIN_DIR)
+	cp target/release/ileap $@
+
+rust-clean: ## Remove the built Rust artifacts
+	rm -rf target
