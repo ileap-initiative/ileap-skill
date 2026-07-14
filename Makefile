@@ -36,11 +36,19 @@ endif
 
 ZOLA_URL := https://github.com/getzola/zola/releases/download/v$(ZOLA_VERSION)/zola-v$(ZOLA_VERSION)-$(ZOLA_TARGET).tar.gz
 
+# --- skills-ref (repo-local, no global/$$HOME install) -----------------------
+# Installed into a venv under ./bin so it is covered by .gitignore and
+# tools-clean. Pin a specific commit/tag with: make ci-skill SKILLS_REF_REV=...
+SKILLS_REF_REV  ?= main
+SKILLS_REF_VENV := $(BIN_DIR)/skills-ref-venv
+SKILLS_REF      := $(SKILLS_REF_VENV)/bin/skills-ref
+SKILLS_REF_URL  := git+https://github.com/agentskills/agentskills.git@$(SKILLS_REF_REV)\#subdirectory=skills-ref
+
 .DEFAULT_GOAL := help
 
 .PHONY: help
 help: ## Show this help
-	@echo "iLEAP microsite — make targets:"
+	@echo "iLEAP skill — make targets:"
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
@@ -59,6 +67,16 @@ $(ZOLA):
 	@curl -fsSL "$(ZOLA_URL)" | tar -xz -C $(BIN_DIR) zola
 	@chmod +x $(ZOLA)
 	@$(ZOLA) --version
+
+# --- Install skills-ref locally ------------------------------------------------
+.PHONY: install-skills-ref
+install-skills-ref: $(SKILLS_REF)
+
+$(SKILLS_REF):
+	@command -v python3 >/dev/null 2>&1 || { echo "python3 is required to install skills-ref." >&2; exit 1; }
+	@echo "Installing skills-ref ($(SKILLS_REF_REV)) into $(SKILLS_REF_VENV)..."
+	python3 -m venv $(SKILLS_REF_VENV)
+	$(SKILLS_REF_VENV)/bin/pip install --quiet "$(SKILLS_REF_URL)"
 
 # --- Build / serve the site --------------------------------------------------
 # Zola bakes base_url into absolute URLs at build time, so the static value in
@@ -93,8 +111,26 @@ site-clean: ## Remove the built output (site/public)
 	rm -rf $(SITE_DIR)/public
 
 .PHONY: tools-clean
-tools-clean: ## Remove the downloaded zola binary (./bin)
+tools-clean: ## Remove downloaded tools (./bin: zola, skills-ref venv)
 	rm -rf $(BIN_DIR)
+	rm -rf $(SKILLS_REF_VENV)
 
 .PHONY: distclean
 distclean: site-clean tools-clean ## Remove built output and downloaded tools
+
+.PHONY: ci
+ci: ## run *all* CI actions locally
+	@echo "Running CI checks..."
+	@$(MAKE) ci-cli ci-skill site-build site-check
+
+.PHONY: ci-skill
+ci-skill: $(SKILLS_REF) ## Validate the ileap skill with a repo-local skills-ref
+	@echo "Running skill checks..."
+	$(SKILLS_REF) validate ./ileap
+
+.PHONY: ci-cli
+ci-cli: ## Perform all checks on the CLI (clippy, fmt, test, build)
+	cargo clippy --all-targets --all-features -- -D warnings
+	cargo fmt --all -- --check
+	cargo test --all-features
+	cargo build --release
