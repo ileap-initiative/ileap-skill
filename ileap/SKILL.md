@@ -7,11 +7,20 @@ description: >-
   terminology (TOC = Transport Operation Category, HOC = Hub Operation Category — not
   "Characteristics"), incorrect field names, and redundant reimplementation. USE FOR: fetching
   shipments, footprints, tocs, hocs, tad, aed; filtering and paginating; checking auth;
-  exploring transport emissions data; optionally rendering an HTML dashboard. TRIGGER PHRASES:
-  "show ileap", "fetch ileap", "list shipments", "list footprints", "query iLEAP", "ileap
-  summary", "show tocs", "show hocs", "show tad", "show aed", "build a dashboard", "create a
-  dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
-allowed-tools: Bash Read Write
+  exploring transport emissions data; rendering an HTML dashboard of iLEAP data. TRIGGER
+  PHRASES: "show ileap", "fetch ileap", "query iLEAP", "ileap summary", "list shipments",
+  "list footprints", "show tocs", "show hocs", "show tad", "show aed", "ileap dashboard",
+  and dashboard requests scoped to iLEAP or transport-emissions data (e.g. "build a
+  dashboard of shipments, footprints, or emissions"). NOT FOR: dashboards or data unrelated
+  to iLEAP.
+license: MIT
+compatibility: >-
+  Designed for Claude Code, Claude.ai, and similar agent environments. Requires network
+  access to an iLEAP API endpoint and permission to execute a bundled binary. Prebuilt
+  binaries cover Linux x86_64, Linux aarch64, and macOS arm64 (Apple Silicon); other
+  platforms are unsupported. No Rust toolchain is needed at runtime.
+metadata:
+  cli_version: "0.1.0"
 ---
 
 # iLEAP CLI Skill
