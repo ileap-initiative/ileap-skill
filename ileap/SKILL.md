@@ -7,11 +7,20 @@ description: >-
   terminology (TOC = Transport Operation Category, HOC = Hub Operation Category — not
   "Characteristics"), incorrect field names, and redundant reimplementation. USE FOR: fetching
   shipments, footprints, tocs, hocs, tad, aed; filtering and paginating; checking auth;
-  exploring transport emissions data; optionally rendering an HTML dashboard. TRIGGER PHRASES:
-  "show ileap", "fetch ileap", "list shipments", "list footprints", "query iLEAP", "ileap
-  summary", "show tocs", "show hocs", "show tad", "show aed", "build a dashboard", "create a
-  dashboard", "generate a dashboard", "show a dashboard", "ileap dashboard".
-allowed-tools: Bash Read Write
+  exploring transport emissions data; rendering an HTML dashboard of iLEAP data. TRIGGER
+  PHRASES: "show ileap", "fetch ileap", "query iLEAP", "ileap summary", "list shipments",
+  "list footprints", "show tocs", "show hocs", "show tad", "show aed", "ileap dashboard",
+  and dashboard requests scoped to iLEAP or transport-emissions data (e.g. "build a
+  dashboard of shipments, footprints, or emissions"). NOT FOR: dashboards or data unrelated
+  to iLEAP.
+license: MIT
+compatibility: >-
+  Designed for Claude Code, Claude.ai, and similar agent environments. Requires network
+  access to an iLEAP API endpoint and permission to execute a bundled binary. Prebuilt
+  binaries cover Linux x86_64, Linux aarch64, and macOS arm64 (Apple Silicon); other
+  platforms are unsupported. No Rust toolchain is needed at runtime.
+metadata:
+  cli_version: "0.1.0"
 ---
 
 # iLEAP CLI Skill
@@ -100,6 +109,7 @@ ileap --token "$ILEAP_TOKEN" auth login
 ```
 
 Credentials can also be set via environment variables:
+
 - `ILEAP_TOKEN`
 - `ILEAP_USERNAME` / `ILEAP_PASSWORD`
 - `ILEAP_BASE_URL` (default: `https://api.preview.ileap.dev`)
@@ -108,11 +118,11 @@ Credentials can also be set via environment variables:
 
 A public demo server is available for exploration and presentations:
 
-| Setting | Value |
-|---|---|
+| Setting  | Value                           |
+| -------- | ------------------------------- |
 | Base URL | `https://api.preview.ileap.dev` |
-| Username | `hello` |
-| Password | `pathfinder` |
+| Username | `hello`                         |
+| Password | `pathfinder`                    |
 
 ```bash
 ileap --base-url https://api.preview.ileap.dev --username hello --password pathfinder auth login
@@ -126,15 +136,15 @@ ileap --base-url https://api.preview.ileap.dev shipments list --yes
 
 ## Resource Types
 
-| Command | Endpoint | Data Type |
-|---|---|---|
-| `footprints list` | `/2/footprints` | PACT DT1/DT2 combined |
-| `footprints get <id>` | `/2/footprints/<id>` | Single PACT footprint by UUID |
-| `shipments list` | `/v1/ileap/shipments` | iLEAP ShipmentFootprints (DT1) |
-| `tocs list` | `/v1/ileap/tocs` | iLEAP TOCs (DT2) |
-| `hocs list` | `/v1/ileap/hocs` | iLEAP HOCs (DT2) |
-| `tad list` | `/v1/ileap/tad` | Transport Activity Data (DT3) |
-| `aed list` | `/v1/ileap/aed` | Aggregated Emissions Data (DT4) |
+| Command               | Endpoint              | Data Type                       |
+| --------------------- | --------------------- | ------------------------------- |
+| `footprints list`     | `/2/footprints`       | PACT DT1/DT2 combined           |
+| `footprints get <id>` | `/2/footprints/<id>`  | Single PACT footprint by UUID   |
+| `shipments list`      | `/v1/ileap/shipments` | iLEAP ShipmentFootprints (DT1)  |
+| `tocs list`           | `/v1/ileap/tocs`      | iLEAP TOCs (DT2)                |
+| `hocs list`           | `/v1/ileap/hocs`      | iLEAP HOCs (DT2)                |
+| `tad list`            | `/v1/ileap/tad`       | Transport Activity Data (DT3)   |
+| `aed list`            | `/v1/ileap/aed`       | Aggregated Emissions Data (DT4) |
 
 ## Listing Resources
 
@@ -215,6 +225,7 @@ Dashboards can show **all resources** or be **scoped to specific ones** based on
 Only fetch and display the resources the user asked about.
 
 Examples:
+
 - "show me a dashboard" → fetch all 6 resource types
 - "show me a shipments dashboard" → fetch only `shipments`
 - "show me TOCs and HOCs" → fetch only `tocs` and `hocs`
@@ -226,9 +237,9 @@ Auth Check (for dashboard flows only):
 - (a) Run `ileap -o compact auth status`.
 - (b) If the command exits with a non-zero code and the error is not auth-related (for example, binary missing), stop and report the error to the user.
 - (c) If the command exits with a non-zero code, or `authenticated` is `false`, attempt demo server login:
-   ```bash
-   ileap --base-url https://api.preview.ileap.dev --username hello --password pathfinder auth login
-   ```
+  ```bash
+  ileap --base-url https://api.preview.ileap.dev --username hello --password pathfinder auth login
+  ```
 - (d) If demo login fails (exit code `4`), ask the user for credentials and stop. Do not attempt to fetch data until authenticated.
 - (e) If `authenticated` is `true` or demo login succeeds, continue to fetch.
 
@@ -258,6 +269,7 @@ SHIPMENTS=$(ileap -o compact shipments list --yes --limit 50 --max-pages 1 2>/tm
 ```
 
 On non-zero exit, read `cli_error.type` from stderr:
+
 - `auth_error` → re-authenticate before retrying
 - `not_found` → endpoint not supported on this server; mark as unavailable in the dashboard
 - `error` → show the message in the dashboard card
@@ -329,27 +341,28 @@ If the open command fails, fall back to the headless behavior: provide the file 
 
 ### Cross-Reference Resolution Rules
 
-| Condition | What to display |
-|---|---|
-| TOC/HOC data was not fetched for this dashboard scope, or the TOC/HOC fetch failed | Show raw `tocId`/`hocId` with note `(TOC/HOC data not loaded)` |
-| TOC/HOC data was fetched, but the data array is empty | Show raw `tocId`/`hocId` with note `(record not found in fetched data)` |
+| Condition                                                                                  | What to display                                                         |
+| ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------- |
+| TOC/HOC data was not fetched for this dashboard scope, or the TOC/HOC fetch failed         | Show raw `tocId`/`hocId` with note `(TOC/HOC data not loaded)`          |
+| TOC/HOC data was fetched, but the data array is empty                                      | Show raw `tocId`/`hocId` with note `(record not found in fetched data)` |
 | TOC/HOC data was fetched, but the specific `tocId`/`hocId` is not found in fetched records | Show raw `tocId`/`hocId` with note `(record not found in fetched data)` |
 
 **Mandatory fields — always show these in the structured view:**
 
-| Resource | Mandatory fields |
-|---|---|
-| ShipmentFootprint | `shipmentId`, `mass`, `tces` |
-| TCE (inside each shipment) | `tceId`, `shipmentId`, `mass`, `co2eTTW`, `co2eWTW`, `distance`, `transportActivity` |
-| TOC | `tocId`, `mode`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit` |
-| HOC | `hocId`, `hubType`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit` |
-| TAD | `activityId`, `mode`, `distance`, `mass`, `transportActivity` |
-| AED | `reportId`, `status`, `referencePeriodStart`, `referencePeriodEnd` |
+| Resource                   | Mandatory fields                                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- |
+| ShipmentFootprint          | `shipmentId`, `mass`, `tces`                                                                          |
+| TCE (inside each shipment) | `tceId`, `shipmentId`, `mass`, `co2eTTW`, `co2eWTW`, `distance`, `transportActivity`                  |
+| TOC                        | `tocId`, `mode`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit`    |
+| HOC                        | `hocId`, `hubType`, `co2eIntensityTTW`, `co2eIntensityWTW`, `energyCarriers`, `transportActivityUnit` |
+| TAD                        | `activityId`, `mode`, `distance`, `mass`, `transportActivity`                                         |
+| AED                        | `reportId`, `status`, `referencePeriodStart`, `referencePeriodEnd`                                    |
 
 These required fields come from the OpenAPI spec (`required` arrays on each schema). If a mandatory field is absent from a record, show it explicitly as `—` (not missing silently).
 
 Keep styling clean and modern with inline CSS (no external dependencies).
 
 **Styling constraints:**
+
 - Always use a light background (white or light grey). Do not use dark mode — the iLEAP logo brand guidelines require a light background context.
 - **No emojis.** Do not use emoji characters anywhere in the generated HTML — not in headings, labels, badges, buttons, table cells, or descriptive text. This means no raw emoji, no `&#128xxx;` or `&#x1Fxxx;` numeric character references, and no emoji-adjacent codepoints (U+1F000 and above). Use plain text only.

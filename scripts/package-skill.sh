@@ -15,6 +15,15 @@ trap 'rm -rf "$STAGING"' EXIT
 [ -f "$SKILL_SRC/SKILL.md" ] || { echo "error: $SKILL_SRC/SKILL.md not found" >&2; exit 1; }
 [ -f "$SKILL_SRC/references/SCHEMAS.md" ] || { echo "error: $SKILL_SRC/references/SCHEMAS.md not found" >&2; exit 1; }
 
+# SKILL.md advertises the bundled CLI version in metadata.version — keep it in
+# lockstep with the crate so a stale bundle is identifiable from the manifest.
+CLI_VERSION="$(grep -m1 '^version' "$REPO_ROOT/cli/Cargo.toml" | cut -d'"' -f2)"
+SKILL_VERSION="$(grep -m1 '^  cli_version:' "$SKILL_SRC/SKILL.md" | cut -d'"' -f2)"
+if [ "$CLI_VERSION" != "$SKILL_VERSION" ]; then
+  echo "error: SKILL.md metadata.version (\"$SKILL_VERSION\") does not match cli/Cargo.toml version (\"$CLI_VERSION\")" >&2
+  exit 1
+fi
+
 mkdir -p "$DIST"
 cp -R "$SKILL_SRC" "$STAGING/ileap"
 
